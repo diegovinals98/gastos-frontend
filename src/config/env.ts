@@ -14,5 +14,7 @@ const getApiUrl = () => {
 };
 
 export const API_URL = getApiUrl();
-export const MONTHLY_BUDGET = 200;
+export const COMPANY_BUDGET = 200; // Presupuesto que regala la empresa
+export const PAYROLL_BUDGET = 20; // Presupuesto de nómina que se consume si se agota el de la empresa
+export const MONTHLY_BUDGET = COMPANY_BUDGET + PAYROLL_BUDGET; // Total para compatibilidad
 

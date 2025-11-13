@@ -5,6 +5,7 @@ export interface Gasto {
   currency: string;
   date: string;
   status: string;
+  approved?: boolean;
 }
 
 export interface GastosResponse {
