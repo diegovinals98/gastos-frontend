@@ -63,3 +63,36 @@ export const savePushToken = async (token: string): Promise<void> => {
   }
 };
 
+export const saveFactorialCookie = async (cookie: string): Promise<void> => {
+  try {
+    const url = `${API_URL}/config/factorial-cookie`;
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    const body = JSON.stringify({ cookie });
+    
+    console.log('📤 Enviando cookie de Factorial...');
+    console.log('📍 URL:', url);
+    console.log('🔧 Método: POST');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Error en la respuesta:', errorText);
+      throw new Error(`Error saving factorial cookie: ${response.statusText}`);
+    }
+    
+    const responseData = await response.json().catch(() => ({}));
+    console.log('✅ Cookie de Factorial guardada exitosamente');
+    console.log('📄 Respuesta del servidor:', JSON.stringify(responseData, null, 2));
+  } catch (error) {
+    console.error('❌ Error guardando cookie de Factorial:', error);
+    throw error;
+  }
+};
+
