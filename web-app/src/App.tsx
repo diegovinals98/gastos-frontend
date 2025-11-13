@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BalanceCard } from './components/BalanceCard';
 import { ExpensesList } from './components/ExpensesList';
 import { MonthSelector } from './components/MonthSelector';
