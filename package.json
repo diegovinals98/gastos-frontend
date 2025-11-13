@@ -1,0 +1,31 @@
+{
+  "name": "factorial-gastos",
+  "version": "1.0.0",
+  "main": "expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "start:clear": "expo start --clear",
+    "start:safe": "EXPO_NO_METRO_LAZY=1 expo start --clear",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "clean": "rm -rf .expo node_modules/.cache .expo-shared"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "date-fns": "^3.0.0",
+    "expo": "~54.0.0",
+    "expo-constants": "~18.0.0",
+    "expo-notifications": "~0.32.12",
+    "expo-status-bar": "~3.0.8",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "~5.6.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
