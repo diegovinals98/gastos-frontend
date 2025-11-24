@@ -18,3 +18,13 @@ export const COMPANY_BUDGET = 200; // Presupuesto que regala la empresa
 export const PAYROLL_BUDGET = 20; // Presupuesto de nómina que se consume si se agota el de la empresa
 export const MONTHLY_BUDGET = COMPANY_BUDGET + PAYROLL_BUDGET; // Total para compatibilidad
 
+// Google Places API Key - puedes configurarlo en app.json extra.googlePlacesApiKey
+const getGooglePlacesApiKey = () => {
+  if (Constants.expoConfig?.extra?.googlePlacesApiKey) {
+    return Constants.expoConfig.extra.googlePlacesApiKey;
+  }
+  return ''; // Necesitas agregar tu API key en app.json
+};
+
+export const GOOGLE_PLACES_API_KEY = getGooglePlacesApiKey();
+

@@ -11,15 +11,35 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { ExpenseDetailScreen } from './src/screens/ExpenseDetailScreen';
 import { useTheme } from './src/config/theme';
+import { Gasto } from './src/types';
 
 const PASSWORD = '12092025';
 const AUTH_STORAGE_KEY = '@factorial_auth';
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+// Stack Navigator para la pantalla Home
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen 
+        name="ExpenseDetail" 
+        component={ExpenseDetailScreen}
+        options={{
+          headerShown: true,
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null = checking, false = not authenticated, true = authenticated
@@ -150,7 +170,7 @@ export default function App() {
       >
         <Tab.Screen 
           name="Home" 
-          component={HomeScreen}
+          component={HomeStack}
           options={{
             tabBarLabel: 'Gastos',
             tabBarIcon: ({ color, size }) => (

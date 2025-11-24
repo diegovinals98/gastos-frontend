@@ -1,9 +1,19 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale/es';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Gasto } from '../types';
 import { useTheme } from '../config/theme';
+
+type RootStackParamList = {
+  HomeMain: undefined;
+  ExpenseDetail: { gasto: Gasto };
+};
+
+type NavigationProp = StackNavigationProp<RootStackParamList, 'ExpenseDetail'>;
 
 interface ExpenseItemProps {
   gasto: Gasto;
@@ -12,10 +22,22 @@ interface ExpenseItemProps {
 
 export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted = false }) => {
   const theme = useTheme();
+  const navigation = useNavigation<NavigationProp>();
   const date = parseISO(gasto.date);
   const formattedDate = format(date, "d 'de' MMMM, HH:mm", { locale: es });
   const amount = Math.abs(gasto.amount);
-  const isRejected = gasto.approved === false || gasto.status === 'rejected';
+
+  const handlePress = () => {
+    navigation.navigate('ExpenseDetail', { gasto });
+  };
+  
+  // Determinar el estado del gasto
+  const status = gasto.status?.toLowerCase() || '';
+  const isRejected = gasto.approved === false || status === 'rejected' || status === 'decline';
+  const isRefunded = status === 'refund';
+  const isReversed = status === 'reverse';
+  const isComplete = status === 'complete';
+  const isPending = !status || status === 'pending' || (!isRejected && !isRefunded && !isReversed && !isComplete);
   
   // Animación para resaltar el gasto nuevo
   const highlightAnim = useRef(new Animated.Value(0)).current;
@@ -67,99 +89,231 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
     }
   }, [isHighlighted]);
 
-  const borderColor = highlightAnim.interpolate({
+  // Detectar si es modo oscuro
+  const isDarkMode = theme.background === '#111827';
+  
+  // Colores y estilos según el estado
+  const getStatusStyles = () => {
+    if (isRejected) {
+      return {
+        containerBg: isDarkMode ? '#2a1f1f' : '#fef2f2',
+        borderColor: theme.error,
+        borderWidth: 2,
+        opacity: 0.7,
+        badgeBg: theme.error,
+        badgeText: 'Rechazado',
+        icon: 'close-circle' as const,
+        iconColor: theme.error,
+        amountColor: theme.textSecondary,
+        merchantColor: theme.textSecondary,
+      };
+    }
+    if (isRefunded) {
+      return {
+        containerBg: isDarkMode ? '#1a2e1f' : '#f0fdf4',
+        borderColor: '#10b981',
+        borderWidth: 2,
+        opacity: 1,
+        badgeBg: '#10b981',
+        badgeText: 'Reembolso',
+        icon: 'arrow-back-circle' as const,
+        iconColor: '#10b981',
+        amountColor: '#10b981',
+        merchantColor: theme.text,
+      };
+    }
+    if (isReversed) {
+      return {
+        containerBg: isDarkMode ? '#2a241f' : '#fffbeb',
+        borderColor: '#f59e0b',
+        borderWidth: 2,
+        opacity: 0.8,
+        badgeBg: '#f59e0b',
+        badgeText: 'Revertido',
+        icon: 'refresh-circle' as const,
+        iconColor: '#f59e0b',
+        amountColor: theme.textSecondary,
+        merchantColor: theme.textSecondary,
+      };
+    }
+    if (isPending) {
+      return {
+        containerBg: theme.card,
+        borderColor: theme.textSecondary,
+        borderWidth: 1,
+        opacity: 1,
+        badgeBg: theme.textSecondary,
+        badgeText: 'Pendiente',
+        icon: 'time-outline' as const,
+        iconColor: theme.textSecondary,
+        amountColor: theme.error,
+        merchantColor: theme.text,
+      };
+    }
+    // Complete o aprobado
+    return {
+      containerBg: isDarkMode ? '#1a2e1f' : '#f0fdf4',
+      borderColor: '#10b981',
+      borderWidth: 1,
+      opacity: 1,
+      badgeBg: '#10b981',
+      badgeText: 'Aprobado',
+      icon: 'checkmark-circle' as const,
+      iconColor: '#10b981',
+      amountColor: theme.error,
+      merchantColor: theme.text,
+    };
+  };
+
+  const statusStyles = getStatusStyles();
+  const highlightBorderColor = highlightAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['transparent', theme.success],
+    outputRange: [statusStyles.borderColor, theme.success],
   });
 
   return (
-    <Animated.View style={[
-      styles.container, 
-      { 
-        backgroundColor: theme.card, 
-        shadowColor: theme.shadow,
-        opacity: isRejected ? 0.5 : 1,
-        transform: [{ scale: scaleAnim }],
-        borderWidth: isHighlighted ? 2 : 0,
-        borderColor: borderColor,
-      }
-    ]}>
+    <TouchableOpacity 
+      activeOpacity={0.7}
+      onPress={handlePress}
+    >
+      <Animated.View style={[
+        styles.container, 
+        { 
+          backgroundColor: statusStyles.containerBg,
+          borderColor: isHighlighted ? highlightBorderColor : statusStyles.borderColor,
+          borderWidth: isHighlighted ? 2 : statusStyles.borderWidth,
+          shadowColor: theme.shadow,
+          opacity: statusStyles.opacity,
+          transform: [{ scale: scaleAnim }],
+        }
+      ]}>
+      {/* Icono de estado a la izquierda */}
+      <View style={[styles.iconContainer, { backgroundColor: `${statusStyles.iconColor}15` }]}>
+        <Ionicons 
+          name={statusStyles.icon} 
+          size={24} 
+          color={statusStyles.iconColor} 
+        />
+      </View>
+
       <View style={styles.content}>
         <View style={styles.merchantRow}>
           <Text style={[
             styles.merchant, 
-            { color: isRejected ? theme.textSecondary : theme.text }
-          ]} numberOfLines={1}>
+            { color: statusStyles.merchantColor }
+          ]} numberOfLines={2}>
           {gasto.merchant}
-        </Text>
-          {isRejected && (
-            <View style={[styles.rejectedBadge, { backgroundColor: theme.error }]}>
-              <Text style={styles.rejectedText}>Rechazado</Text>
-            </View>
-          )}
+          </Text>
         </View>
-        <Text style={[styles.date, { color: theme.textSecondary }]}>{formattedDate}</Text>
+        <View style={styles.badgeRow}>
+          <View style={[styles.statusBadge, { backgroundColor: statusStyles.badgeBg }]}>
+            <Text style={styles.statusText}>{statusStyles.badgeText}</Text>
+          </View>
+        </View>
+        <View style={styles.dateRow}>
+          <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} />
+          <Text style={[styles.date, { color: theme.textSecondary }]}>{formattedDate}</Text>
+        </View>
+        {(gasto.location || gasto.city || gasto.country) && (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
+            <Text style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+              {gasto.location || [gasto.city, gasto.country].filter(Boolean).join(', ') || ''}
+            </Text>
+          </View>
+        )}
       </View>
+      
       <View style={styles.amountContainer}>
         <Text style={[
           styles.amount, 
-          { color: isRejected ? theme.textSecondary : theme.error }
+          { color: statusStyles.amountColor }
         ]}>
-          -{amount.toFixed(2)} €
+          {isRefunded ? '+' : '-'}{amount.toFixed(2)} €
         </Text>
       </View>
     </Animated.View>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginHorizontal: 16,
-    marginVertical: 6,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    marginVertical: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   content: {
     flex: 1,
     marginRight: 12,
   },
   merchantRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    flexWrap: 'wrap',
+    marginBottom: 6,
   },
   merchant: {
     fontSize: 16,
     fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
+    lineHeight: 22,
   },
-  rejectedBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+  badgeRow: {
+    marginBottom: 6,
   },
-  rejectedText: {
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
     color: '#ffffff',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
   },
   date: {
-    fontSize: 13,
+    fontSize: 12,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  locationText: {
+    fontSize: 11,
+    flex: 1,
   },
   amountContainer: {
     justifyContent: 'center',
+    alignItems: 'flex-end',
+    minWidth: 80,
   },
   amount: {
     fontSize: 18,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
 });
 

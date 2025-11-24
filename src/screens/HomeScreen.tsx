@@ -145,16 +145,27 @@ export const HomeScreen: React.FC = () => {
       console.log('🔔 [NotificationReceived] Notificación recibida!');
       console.log('🔔 [NotificationReceived] Notification completa:', JSON.stringify(notification, null, 2));
       
+      // Extraer el estado y el ID del gasto de la notificación
+      const notificationData = notification.request.content.data || {};
+      const status = (typeof notificationData.status === 'string' ? notificationData.status.toLowerCase() : '') ||
+                     (typeof notificationData.type === 'string' ? notificationData.type.toLowerCase() : '') ||
+                     '';
+      console.log('🔔 [NotificationReceived] Estado de la notificación:', status);
+      
       // Extraer el ID del gasto de la notificación
       console.log('🔔 [NotificationReceived] Intentando extraer ID...');
-      const gastoId = notification.request.content.data?.gastoId || 
-                      notification.request.content.data?.id ||
+      const gastoId = notificationData.gastoId || 
+                      notificationData.id ||
                       extractIdFromNotification(notification);
       
       console.log('🔔 [NotificationReceived] ID extraído:', gastoId);
+      console.log('🔔 [NotificationReceived] Estado:', status);
       
+      // Manejar diferentes tipos de notificaciones: complete, decline, refund, reverse
       if (gastoId) {
         console.log('✅ [NotificationReceived] ID válido encontrado:', gastoId);
+        console.log('✅ [NotificationReceived] Tipo de notificación:', status || 'desconocido');
+        
         // Marcar el gasto de la notificación para resaltarlo
         setHighlightedExpenseId(String(gastoId));
         console.log('✅ [NotificationReceived] highlightedExpenseId actualizado a:', gastoId);
@@ -196,16 +207,27 @@ export const HomeScreen: React.FC = () => {
       console.log('👆 [NotificationResponse] Usuario interactuó con la notificación!');
       console.log('👆 [NotificationResponse] Response completa:', JSON.stringify(response, null, 2));
       
+      // Extraer el estado y el ID del gasto de la notificación
+      const notificationData = response.notification.request.content.data || {};
+      const status = (typeof notificationData.status === 'string' ? notificationData.status.toLowerCase() : '') ||
+                     (typeof notificationData.type === 'string' ? notificationData.type.toLowerCase() : '') ||
+                     '';
+      console.log('👆 [NotificationResponse] Estado de la notificación:', status);
+      
       // Extraer el ID del gasto de la notificación
       console.log('👆 [NotificationResponse] Intentando extraer ID...');
-      const gastoId = response.notification.request.content.data?.gastoId || 
-                      response.notification.request.content.data?.id ||
+      const gastoId = notificationData.gastoId || 
+                      notificationData.id ||
                       extractIdFromNotification(response.notification);
       
       console.log('👆 [NotificationResponse] ID extraído:', gastoId);
+      console.log('👆 [NotificationResponse] Estado:', status);
       
+      // Manejar diferentes tipos de notificaciones: complete, decline, refund, reverse
       if (gastoId) {
         console.log('✅ [NotificationResponse] ID válido encontrado:', gastoId);
+        console.log('✅ [NotificationResponse] Tipo de notificación:', status || 'desconocido');
+        
         // Marcar el gasto de la notificación para resaltarlo
         setHighlightedExpenseId(String(gastoId));
         console.log('✅ [NotificationResponse] highlightedExpenseId actualizado a:', gastoId);
@@ -301,9 +323,19 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  // Solo contar los gastos aprobados (excluir los rechazados)
+  // Solo contar los gastos aprobados (complete) - excluir rechazados, revertidos y reembolsos
   const totalSpent = gastosData?.gastos
-    .filter(gasto => gasto.approved !== false && gasto.status !== 'rejected')
+    .filter(gasto => {
+      const status = gasto.status?.toLowerCase() || '';
+      // Incluir solo gastos completados/aprobados
+      // Excluir: decline, rejected, reverse, refund
+      return (gasto.approved !== false && 
+              status !== 'rejected' && 
+              status !== 'decline' && 
+              status !== 'reverse' && 
+              status !== 'refund') ||
+             status === 'complete';
+    })
     .reduce((sum, gasto) => sum + gasto.amount, 0) || 0;
   
   const colorScheme = useColorScheme();

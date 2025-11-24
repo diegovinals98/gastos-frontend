@@ -2,7 +2,7 @@
   "expo": {
     "name": "Factorial Gastos",
     "slug": "gastos",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -51,7 +51,8 @@
         "projectId": "374a9853-8b4e-4f34-99c2-2cc88791694c"
       },
       "apiUrl": "https://gastos-rs.sofiaydiego.net",
-      "monthlyBudget": 200
+      "monthlyBudget": 200,
+      "googlePlacesApiKey": "AIzaSyCOLyNUlEEZ25Tgn0o4nsRR7TO-rKLuOYA"
     }
   }
 }

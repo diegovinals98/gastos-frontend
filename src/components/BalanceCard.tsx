@@ -38,10 +38,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-      <Text style={[styles.monthText, { color: theme.text }]}>
-        {monthName.charAt(0).toUpperCase() + monthName.slice(1)} {year}
-      </Text>
-      
+
       <View style={styles.balanceContainer}>
         <Text style={[styles.label, { color: theme.textSecondary }]}>Saldo restante</Text>
         <Text style={[styles.amount, { color: theme.success }, isOverBudget && { color: theme.error }]}>
