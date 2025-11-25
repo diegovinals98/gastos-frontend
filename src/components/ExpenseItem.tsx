@@ -39,53 +39,36 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
   const isComplete = status === 'complete';
   const isPending = !status || status === 'pending' || (!isRejected && !isRefunded && !isReversed && !isComplete);
   
-  // Animación para resaltar el gasto nuevo
-  const highlightAnim = useRef(new Animated.Value(0)).current;
+  // Animación simple: más grande y luego más pequeño
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (isHighlighted) {
       console.log('✨ [ExpenseItem] Gasto resaltado detectado! ID:', gasto.id);
-      console.log('✨ [ExpenseItem] Iniciando animación de resaltado...');
       
-      // Resetear valores antes de animar
-      highlightAnim.setValue(0);
+      // Resetear valor antes de animar
       scaleAnim.setValue(1);
       
-      // Animación de pulso y resaltado - todas con useNativeDriver: false para evitar conflictos
+      // Animación simple: grande -> pequeño
       Animated.sequence([
-        Animated.parallel([
-          Animated.timing(highlightAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: false,
-          }),
-          Animated.sequence([
-            Animated.timing(scaleAnim, {
-              toValue: 1.02,
-              duration: 300,
-              useNativeDriver: false,
-            }),
-            Animated.timing(scaleAnim, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: false,
-            }),
-          ]),
-        ]),
-        Animated.timing(highlightAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: false,
+        // Hacer más grande
+        Animated.timing(scaleAnim, {
+          toValue: 1.15,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        // Volver a tamaño normal
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
         }),
       ]).start(() => {
         console.log('✅ [ExpenseItem] Animación completada para gasto:', gasto.id);
       });
     } else {
-      // Resetear animaciones cuando no está resaltado
-      highlightAnim.setValue(0);
+      // Resetear animación cuando no está resaltado
       scaleAnim.setValue(1);
-      console.log('ℹ️ [ExpenseItem] Gasto normal, ID:', gasto.id, 'isHighlighted:', isHighlighted);
     }
   }, [isHighlighted]);
 
@@ -166,10 +149,6 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
   };
 
   const statusStyles = getStatusStyles();
-  const highlightBorderColor = highlightAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [statusStyles.borderColor, theme.success],
-  });
 
   return (
     <TouchableOpacity 
@@ -180,11 +159,13 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
         styles.container, 
         { 
           backgroundColor: statusStyles.containerBg,
-          borderColor: isHighlighted ? highlightBorderColor : statusStyles.borderColor,
-          borderWidth: isHighlighted ? 2 : statusStyles.borderWidth,
+          borderColor: statusStyles.borderColor,
+          borderWidth: statusStyles.borderWidth,
           shadowColor: theme.shadow,
           opacity: statusStyles.opacity,
-          transform: [{ scale: scaleAnim }],
+          transform: [
+            { scale: scaleAnim }
+          ],
         }
       ]}>
       {/* Icono de estado a la izquierda */}

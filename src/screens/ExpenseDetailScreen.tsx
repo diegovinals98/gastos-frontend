@@ -188,6 +188,82 @@ export const ExpenseDetailScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Mapa de Apple Maps */}
+        {isSearchingLocation && !(gasto.latitude && gasto.longitude) ? (
+          <View style={[styles.detailsCard, { backgroundColor: theme.card }]}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.textSecondary} />
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+                Buscando ubicación...
+              </Text>
+            </View>
+          </View>
+        ) : (gasto.latitude && gasto.longitude) ? (
+          <View style={styles.mapCard}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Ubicación</Text>
+            <TouchableOpacity
+              style={[styles.mapContainer, { backgroundColor: theme.background }]}
+              activeOpacity={0.8}
+              onPress={() => {
+                const url = Platform.select({
+                  ios: `maps://maps.apple.com/?q=${gasto.latitude},${gasto.longitude}&ll=${gasto.latitude},${gasto.longitude}`,
+                  android: `geo:${gasto.latitude},${gasto.longitude}?q=${gasto.latitude},${gasto.longitude}`,
+                });
+                if (url) {
+                  Linking.openURL(url).catch(() => {
+                    // Si falla, intentar con URL web de Apple Maps
+                    Linking.openURL(`https://maps.apple.com/?q=${gasto.latitude},${gasto.longitude}&ll=${gasto.latitude},${gasto.longitude}`).catch(console.error);
+                  });
+                }
+              }}
+            >
+              {!mapImageError ? (
+                <Image
+                  source={{
+                    uri: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff0000(${gasto.longitude},${gasto.latitude})/${gasto.longitude},${gasto.latitude},15,0/600x300@2x?access_token=pk.eyJ1IjoiZHZpbmFsczk4IiwiYSI6ImNtOHd2ZWVibTB1amIybHNkdmN3NzZrNnkifQ.EFynoYmI5E_HGUAR2fjlcw`,
+                  }}
+                  style={styles.mapImage}
+                  resizeMode="cover"
+                  onError={() => {
+                    console.log('Error cargando mapa estático, usando fallback');
+                    setMapImageError(true);
+                  }}
+                  onLoad={() => {
+                    console.log('Mapa cargado correctamente');
+                    setMapImageError(false);
+                  }}
+                />
+              ) : (
+                <View style={styles.mapFallback}>
+                  <Ionicons name="location" size={64} color="#007AFF" />
+                  <Text style={[styles.mapFallbackText, { color: theme.text }]}>
+                    {gasto.location || gasto.city || gasto.merchant || 'Ubicación'}
+                  </Text>
+                  <Text style={[styles.mapFallbackCoords, { color: theme.textSecondary }]}>
+                    {gasto.latitude.toFixed(6)}, {gasto.longitude.toFixed(6)}
+                  </Text>
+                </View>
+              )}
+              {/* Overlay solo con el botón, sin cubrir el mapa */}
+              <View style={styles.mapOverlay}>
+                <View style={styles.mapHint}>
+                  <Ionicons name="map-outline" size={18} color="#ffffff" />
+                  <Text style={styles.mapHintText}>Abrir en Apple Maps</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={[styles.detailsCard, { backgroundColor: theme.card }]}>
+            <View style={styles.noLocationContainer}>
+              <Ionicons name="location-outline" size={48} color={theme.textSecondary} />
+              <Text style={[styles.noLocationText, { color: theme.textSecondary }]}>
+                No se pudo encontrar la ubicación
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Información detallada */}
         <View style={[styles.detailsCard, { backgroundColor: theme.card }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Información del Pago</Text>
@@ -272,81 +348,7 @@ export const ExpenseDetailScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Mapa de Apple Maps */}
-        {isSearchingLocation && !(gasto.latitude && gasto.longitude) ? (
-          <View style={[styles.detailsCard, { backgroundColor: theme.card }]}>
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.textSecondary} />
-              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-                Buscando ubicación...
-              </Text>
-            </View>
-          </View>
-        ) : (gasto.latitude && gasto.longitude) ? (
-          <View style={styles.mapCard}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Ubicación</Text>
-            <TouchableOpacity
-              style={[styles.mapContainer, { backgroundColor: theme.background }]}
-              activeOpacity={0.8}
-              onPress={() => {
-                const url = Platform.select({
-                  ios: `maps://maps.apple.com/?q=${gasto.latitude},${gasto.longitude}&ll=${gasto.latitude},${gasto.longitude}`,
-                  android: `geo:${gasto.latitude},${gasto.longitude}?q=${gasto.latitude},${gasto.longitude}`,
-                });
-                if (url) {
-                  Linking.openURL(url).catch(() => {
-                    // Si falla, intentar con URL web de Apple Maps
-                    Linking.openURL(`https://maps.apple.com/?q=${gasto.latitude},${gasto.longitude}&ll=${gasto.latitude},${gasto.longitude}`).catch(console.error);
-                  });
-                }
-              }}
-            >
-              {!mapImageError ? (
-                <Image
-                  source={{
-                    uri: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff0000(${gasto.longitude},${gasto.latitude})/${gasto.longitude},${gasto.latitude},15,0/600x300@2x?access_token=pk.eyJ1IjoiZHZpbmFsczk4IiwiYSI6ImNtOHd2ZWVibTB1amIybHNkdmN3NzZrNnkifQ.EFynoYmI5E_HGUAR2fjlcw`,
-                  }}
-                  style={styles.mapImage}
-                  resizeMode="cover"
-                  onError={() => {
-                    console.log('Error cargando mapa estático, usando fallback');
-                    setMapImageError(true);
-                  }}
-                  onLoad={() => {
-                    console.log('Mapa cargado correctamente');
-                    setMapImageError(false);
-                  }}
-                />
-              ) : (
-                <View style={styles.mapFallback}>
-                  <Ionicons name="location" size={64} color="#007AFF" />
-                  <Text style={[styles.mapFallbackText, { color: theme.text }]}>
-                    {gasto.location || gasto.city || gasto.merchant || 'Ubicación'}
-                  </Text>
-                  <Text style={[styles.mapFallbackCoords, { color: theme.textSecondary }]}>
-                    {gasto.latitude.toFixed(6)}, {gasto.longitude.toFixed(6)}
-                  </Text>
-                </View>
-              )}
-              {/* Overlay solo con el botón, sin cubrir el mapa */}
-              <View style={styles.mapOverlay}>
-                <View style={styles.mapHint}>
-                  <Ionicons name="map-outline" size={18} color="#ffffff" />
-                  <Text style={styles.mapHintText}>Abrir en Apple Maps</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={[styles.detailsCard, { backgroundColor: theme.card }]}>
-            <View style={styles.noLocationContainer}>
-              <Ionicons name="location-outline" size={48} color={theme.textSecondary} />
-              <Text style={[styles.noLocationText, { color: theme.textSecondary }]}>
-                No se pudo encontrar la ubicación
-              </Text>
-            </View>
-          </View>
-        )}
+        
       </ScrollView>
     </SafeAreaView>
   );

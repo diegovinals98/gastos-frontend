@@ -9,27 +9,39 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { BalanceCard } from '../components/BalanceCard';
 import { ExpensesList } from '../components/ExpensesList';
 import { MonthSelector } from '../components/MonthSelector';
 import { fetchGastos } from '../services/api';
-import { GastosResponse } from '../types';
+import { GastosResponse, Gasto } from '../types';
 import {
   registerForPushNotificationsAsync,
 } from '../services/notifications';
 import { COMPANY_BUDGET, PAYROLL_BUDGET } from '../config/env';
 import * as Notifications from 'expo-notifications';
 
+type RootStackParamList = {
+  HomeMain: undefined;
+  ExpenseDetail: { gasto: Gasto };
+};
+
+type NavigationProp = StackNavigationProp<RootStackParamList, 'ExpenseDetail'>;
+
 export const HomeScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const [gastosData, setGastosData] = useState<GastosResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
   const [highlightedExpenseId, setHighlightedExpenseId] = useState<string | null>(null);
+  const [pendingNavigationId, setPendingNavigationId] = useState<string | null>(null);
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
   const flatListRef = useRef<any>(null);
+  const navigateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Función auxiliar para extraer ID de la notificación
   const extractIdFromNotification = (notification: any): string | null => {
@@ -193,19 +205,43 @@ export const HomeScreen: React.FC = () => {
           loadGastos();
         }
         
-        // Quitar el resaltado después de 5 segundos
+        // Marcar que queremos navegar después de la animación
+        setPendingNavigationId(String(gastoId));
+        
+        // Navegar después de que termine la animación completamente (800ms de animación + 200ms de margen)
+        navigateTimeoutRef.current = setTimeout(() => {
+          const gastos = gastosData?.gastos || [];
+          const gasto = gastos.find(g => String(g.id) === String(gastoId));
+          if (gasto) {
+            console.log('🚀 [NotificationReceived] Navegando a pantalla de detalles del gasto (después de animación):', gastoId);
+            navigation.navigate('ExpenseDetail', { gasto });
+            setPendingNavigationId(null);
+          } else {
+            console.log('⏳ [NotificationReceived] Esperando a que se cargue el gasto para navegar...');
+          }
+        }, 7000); // 800ms animación + 200ms margen
+        
+        // Quitar el resaltado después de 7 segundos (para que la animación completa sea visible)
         setTimeout(() => {
-          console.log('⏰ [NotificationReceived] Quitando resaltado después de 5 segundos');
+          console.log('⏰ [NotificationReceived] Quitando resaltado después de 7 segundos');
           setHighlightedExpenseId(null);
-        }, 5000);
+        }, 7000);
       } else {
         console.log('❌ [NotificationReceived] No se pudo extraer ID de la notificación');
       }
     });
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(async (response) => {
       console.log('👆 [NotificationResponse] Usuario interactuó con la notificación!');
       console.log('👆 [NotificationResponse] Response completa:', JSON.stringify(response, null, 2));
+      
+      // Limpiar el badge cuando se pulsa una notificación
+      try {
+        await Notifications.setBadgeCountAsync(0);
+        console.log('✅ [NotificationResponse] Badge limpiado');
+      } catch (error) {
+        console.error('❌ [NotificationResponse] Error al limpiar badge:', error);
+      }
       
       // Extraer el estado y el ID del gasto de la notificación
       const notificationData = response.notification.request.content.data || {};
@@ -255,11 +291,27 @@ export const HomeScreen: React.FC = () => {
           loadGastos();
         }
         
-        // Quitar el resaltado después de 5 segundos
+        // Marcar que queremos navegar después de la animación
+        setPendingNavigationId(String(gastoId));
+        
+        // Navegar después de que termine la animación completamente (800ms de animación + 200ms de margen)
+        navigateTimeoutRef.current = setTimeout(() => {
+          const gastos = gastosData?.gastos || [];
+          const gasto = gastos.find(g => String(g.id) === String(gastoId));
+          if (gasto) {
+            console.log('🚀 [NotificationResponse] Navegando a pantalla de detalles del gasto (después de animación):', gastoId);
+            navigation.navigate('ExpenseDetail', { gasto });
+            setPendingNavigationId(null);
+          } else {
+            console.log('⏳ [NotificationResponse] Esperando a que se cargue el gasto para navegar...');
+          }
+        }, 1000); // 800ms animación + 200ms margen
+        
+        // Quitar el resaltado después de 7 segundos (para que la animación completa sea visible)
         setTimeout(() => {
-          console.log('⏰ [NotificationResponse] Quitando resaltado después de 5 segundos');
+          console.log('⏰ [NotificationResponse] Quitando resaltado después de 7 segundos');
           setHighlightedExpenseId(null);
-        }, 5000);
+        }, 7000);
       } else {
         console.log('❌ [NotificationResponse] No se pudo extraer ID de la notificación');
       }
@@ -284,6 +336,9 @@ export const HomeScreen: React.FC = () => {
       if (responseListener.current) {
         responseListener.current.remove();
       }
+      if (navigateTimeoutRef.current) {
+        clearTimeout(navigateTimeoutRef.current);
+      }
       subscription.remove();
     };
   }, []);
@@ -291,6 +346,21 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => {
     loadGastos();
   }, [month, year]);
+
+  // Efecto para navegar cuando los gastos estén disponibles y haya una navegación pendiente
+  useEffect(() => {
+    if (pendingNavigationId && gastosData?.gastos) {
+      const gasto = gastosData.gastos.find(g => String(g.id) === String(pendingNavigationId));
+      if (gasto) {
+        console.log('🚀 [HomeScreen] Navegando a pantalla de detalles del gasto (después de carga):', pendingNavigationId);
+        // Pequeño delay para asegurar que la UI esté lista
+        setTimeout(() => {
+          navigation.navigate('ExpenseDetail', { gasto });
+          setPendingNavigationId(null);
+        }, 100);
+      }
+    }
+  }, [pendingNavigationId, gastosData, navigation]);
 
   const onRefresh = () => {
     setRefreshing(true);

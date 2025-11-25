@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.factorial.gastos",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Esta app necesita acceso a las notificaciones para recordarte sobre tus gastos.",
         "ITSAppUsesNonExemptEncryption": false
