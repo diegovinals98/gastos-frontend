@@ -79,10 +79,10 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
   const getStatusStyles = () => {
     if (isRejected) {
       return {
-        containerBg: isDarkMode ? '#2a1f1f' : '#fef2f2',
+        containerBg: theme.card,
         borderColor: theme.error,
         borderWidth: 2,
-        opacity: 0.7,
+        opacity: 0.5,
         badgeBg: theme.error,
         badgeText: 'Rechazado',
         icon: 'close-circle' as const,
@@ -93,7 +93,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
     }
     if (isRefunded) {
       return {
-        containerBg: isDarkMode ? '#1a2e1f' : '#f0fdf4',
+        containerBg: theme.card,
         borderColor: '#10b981',
         borderWidth: 2,
         opacity: 1,
@@ -107,10 +107,10 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
     }
     if (isReversed) {
       return {
-        containerBg: isDarkMode ? '#2a241f' : '#fffbeb',
+        containerBg: theme.card,
         borderColor: '#f59e0b',
         borderWidth: 2,
-        opacity: 0.8,
+        opacity: 1,
         badgeBg: '#f59e0b',
         badgeText: 'Revertido',
         icon: 'refresh-circle' as const,
@@ -135,7 +135,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
     }
     // Complete o aprobado
     return {
-      containerBg: isDarkMode ? '#1a2e1f' : '#f0fdf4',
+      containerBg: theme.card,
       borderColor: '#10b981',
       borderWidth: 1,
       opacity: 1,
