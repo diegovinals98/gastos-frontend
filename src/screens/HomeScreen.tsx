@@ -23,7 +23,7 @@ import { COMPANY_BUDGET, PAYROLL_BUDGET } from '../config/env';
 import * as Notifications from 'expo-notifications';
 
 type RootStackParamList = {
-  HomeMain: undefined;
+  Home: undefined;
   ExpenseDetail: { gasto: Gasto };
 };
 

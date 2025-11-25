@@ -9,7 +9,7 @@ import { Gasto } from '../types';
 import { useTheme } from '../config/theme';
 
 type RootStackParamList = {
-  HomeMain: undefined;
+  Home: undefined;
   ExpenseDetail: { gasto: Gasto };
 };
 

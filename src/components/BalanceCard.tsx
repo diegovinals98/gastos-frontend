@@ -47,45 +47,28 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
       </View>
 
       <View style={styles.budgetBreakdown}>
-        <View style={styles.budgetItem}>
-          <View style={styles.budgetHeader}>
-            <Text style={[styles.budgetLabel, { color: theme.textSecondary }]}>Presupuesto Empresa</Text>
-            <Text style={[styles.budgetAmount, { color: theme.text }]}>
-              {companyRemaining.toFixed(2)} / {companyBudget.toFixed(2)} €
-            </Text>
+        {/* Solo mostrar presupuesto de nómina si se ha alcanzado el presupuesto de la empresa */}
+        {absTotalSpent >= companyBudget && (
+          <View style={styles.budgetItem}>
+            <View style={styles.budgetHeader}>
+              <Text style={[styles.budgetLabel, { color: theme.textSecondary }]}>Presupuesto Nómina</Text>
+              <Text style={[styles.budgetAmount, { color: theme.text }]}>
+                {payrollRemaining.toFixed(2)} / {payrollBudget.toFixed(2)} €
+              </Text>
+            </View>
+            <View style={[styles.budgetProgressBar, { backgroundColor: theme.border }]}>
+              <View
+                style={[
+                  styles.budgetProgressFill,
+                  {
+                    width: `${Math.min((payrollSpent / payrollBudget) * 100, 100)}%`,
+                    backgroundColor: payrollRemaining <= 0 ? theme.error : payrollSpent > 0 ? theme.warning : theme.success,
+                  },
+                ]}
+              />
+            </View>
           </View>
-          <View style={[styles.budgetProgressBar, { backgroundColor: theme.border }]}>
-            <View
-              style={[
-                styles.budgetProgressFill,
-                {
-                  width: `${Math.min((companySpent / companyBudget) * 100, 100)}%`,
-                  backgroundColor: companyRemaining <= 0 ? theme.error : theme.success,
-                },
-              ]}
-            />
-          </View>
-        </View>
-
-        <View style={styles.budgetItem}>
-          <View style={styles.budgetHeader}>
-            <Text style={[styles.budgetLabel, { color: theme.textSecondary }]}>Presupuesto Nómina</Text>
-            <Text style={[styles.budgetAmount, { color: theme.text }]}>
-              {payrollRemaining.toFixed(2)} / {payrollBudget.toFixed(2)} €
-            </Text>
-          </View>
-          <View style={[styles.budgetProgressBar, { backgroundColor: theme.border }]}>
-            <View
-              style={[
-                styles.budgetProgressFill,
-                {
-                  width: `${Math.min((payrollSpent / payrollBudget) * 100, 100)}%`,
-                  backgroundColor: payrollRemaining <= 0 ? theme.error : payrollSpent > 0 ? theme.warning : theme.success,
-                },
-              ]}
-            />
-          </View>
-        </View>
+        )}
       </View>
 
       <View style={styles.statsContainer}>

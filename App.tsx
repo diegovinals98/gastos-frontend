@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { CalendarScreen } from './src/screens/CalendarScreen';
 import { ExpenseDetailScreen } from './src/screens/ExpenseDetailScreen';
 import { useTheme } from './src/config/theme';
 import { Gasto } from './src/types';
@@ -29,7 +30,7 @@ const Stack = createStackNavigator();
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen 
         name="ExpenseDetail" 
         component={ExpenseDetailScreen}
@@ -172,9 +173,19 @@ export default function App() {
           name="Home" 
           component={HomeStack}
           options={{
-            tabBarLabel: 'Gastos',
+            tabBarLabel: 'Pagos',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="wallet-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen 
+          name="Calendar" 
+          component={CalendarScreen}
+          options={{
+            tabBarLabel: 'Calendario',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="calendar-outline" size={size} color={color} />
             ),
           }}
         />
@@ -188,6 +199,7 @@ export default function App() {
             ),
           }}
         />
+        
       </Tab.Navigator>
     </NavigationContainer>
   );
