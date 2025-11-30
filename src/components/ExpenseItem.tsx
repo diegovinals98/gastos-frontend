@@ -126,7 +126,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
         borderWidth: 1,
         opacity: 1,
         badgeBg: theme.textSecondary,
-        badgeText: 'Pendiente',
+        badgeText: 'Retenido',
         icon: 'time-outline' as const,
         iconColor: theme.textSecondary,
         amountColor: theme.error,

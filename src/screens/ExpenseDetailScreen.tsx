@@ -83,7 +83,7 @@ export const ExpenseDetailScreen: React.FC = () => {
     }
     if (isPending) {
       return {
-        label: 'Pendiente',
+        label: 'Retenido',
         color: theme.textSecondary,
         icon: 'time-outline' as const,
         bgColor: theme.card,

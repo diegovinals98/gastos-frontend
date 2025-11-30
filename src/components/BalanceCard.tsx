@@ -33,6 +33,8 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   const remaining = companyRemaining;
   const percentage = companyBudget > 0 ? (absTotalSpent / companyBudget) * 100 : 0;
   const isOverBudget = remaining < 0;
+  const isCompanyBudgetMaxed = absTotalSpent >= companyBudget;
+  const isPayrollBudgetMaxed = payrollSpent >= payrollBudget;
 
   const monthName = format(new Date(year, month - 1), 'MMMM', { locale: es });
 
@@ -53,7 +55,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
             <View style={styles.budgetHeader}>
               <Text style={[styles.budgetLabel, { color: theme.textSecondary }]}>Presupuesto Nómina</Text>
               <Text style={[styles.budgetAmount, { color: theme.text }]}>
-                {payrollRemaining.toFixed(2)} / {payrollBudget.toFixed(2)} €
+                {payrollSpent.toFixed(2)} / {payrollBudget.toFixed(2)} €
               </Text>
             </View>
             <View style={[styles.budgetProgressBar, { backgroundColor: theme.border }]}>
@@ -62,7 +64,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
                   styles.budgetProgressFill,
                   {
                     width: `${Math.min((payrollSpent / payrollBudget) * 100, 100)}%`,
-                    backgroundColor: payrollRemaining <= 0 ? theme.error : payrollSpent > 0 ? theme.warning : theme.success,
+                    backgroundColor: isPayrollBudgetMaxed ? theme.error : payrollSpent > 0 ? theme.warning : theme.success,
                   },
                 ]}
               />
@@ -94,7 +96,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
             styles.progressFill,
             {
               width: `${Math.min(percentage, 100)}%`,
-              backgroundColor: isOverBudget ? theme.error : percentage > 80 ? theme.warning : theme.success,
+              backgroundColor: isCompanyBudgetMaxed ? theme.error : isOverBudget ? theme.error : percentage > 80 ? theme.warning : theme.success,
             },
           ]}
         />
