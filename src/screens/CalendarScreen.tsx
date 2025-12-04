@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   SafeAreaView,
@@ -8,11 +8,8 @@ import {
   useColorScheme,
   ActivityIndicator,
   ScrollView,
-  Animated,
-  Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import {
   format,
   startOfMonth,
@@ -43,12 +40,6 @@ export const CalendarScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const colorScheme = useColorScheme();
   const theme = useTheme();
-  
-  // Animation values for swipe gestures
-  const translateX = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-  const isAnimating = useRef(false);
-  const screenWidth = Dimensions.get('window').width;
 
   useEffect(() => {
     loadMonthData();
@@ -103,134 +94,14 @@ export const CalendarScreen: React.FC = () => {
   };
 
   const goToPreviousMonth = () => {
-    if (isAnimating.current) return;
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     setSelectedDate(null);
   };
 
   const goToNextMonth = () => {
-    if (isAnimating.current) return;
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     setSelectedDate(null);
   };
-
-  // Animate month change
-  const animateMonthChange = (direction: 'left' | 'right', callback: () => void) => {
-    if (isAnimating.current) return;
-    isAnimating.current = true;
-    
-    const targetX = direction === 'left' ? -screenWidth : screenWidth;
-    
-    // Animate out
-    Animated.parallel([
-      Animated.timing(translateX, {
-        toValue: targetX,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0.3,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Execute callback (change month)
-      callback();
-      
-      // Reset position from opposite side
-      translateX.setValue(direction === 'left' ? screenWidth : -screenWidth);
-      
-      // Animate in
-      Animated.parallel([
-        Animated.spring(translateX, {
-          toValue: 0,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        isAnimating.current = false;
-      });
-    });
-  };
-
-  const onGestureEvent = Animated.event(
-    [{ nativeEvent: { translationX: translateX } }],
-    { useNativeDriver: true }
-  );
-
-  const onHandlerStateChange = (event: any) => {
-    if (event.nativeEvent.oldState === State.ACTIVE) {
-      const { translationX, velocityX } = event.nativeEvent;
-      const threshold = 50;
-      
-      // Check if it's a horizontal swipe
-      if (Math.abs(translationX) > Math.abs(event.nativeEvent.translationY || 0)) {
-        if (translationX > threshold || velocityX > 500) {
-          // Swipe right - go to previous month
-          animateMonthChange('right', goToPreviousMonth);
-        } else if (translationX < -threshold || velocityX < -500) {
-          // Swipe left - go to next month
-          animateMonthChange('left', goToNextMonth);
-        } else {
-          // Not enough swipe, spring back
-          Animated.parallel([
-            Animated.spring(translateX, {
-              toValue: 0,
-              tension: 50,
-              friction: 7,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 1,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }
-      } else {
-        // Vertical swipe, reset
-        Animated.parallel([
-          Animated.spring(translateX, {
-            toValue: 0,
-            tension: 50,
-            friction: 7,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
-    }
-  };
-
-  // Update opacity based on translateX
-  useEffect(() => {
-    const listener = translateX.addListener(({ value }) => {
-      const opacityValue = 1 - Math.min(Math.abs(value) / 200, 0.5);
-      opacity.setValue(opacityValue);
-    });
-
-    return () => {
-      translateX.removeListener(listener);
-    };
-  }, []);
-
-  // Reset animation when currentDate changes (from buttons)
-  useEffect(() => {
-    if (!isAnimating.current) {
-      translateX.setValue(0);
-      opacity.setValue(1);
-    }
-  }, [currentDate]);
 
   const goToToday = () => {
     setCurrentDate(new Date());
@@ -445,22 +316,10 @@ export const CalendarScreen: React.FC = () => {
   const monthName = format(currentDate, 'MMMM yyyy', { locale: es });
   const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
-  const animatedStyle = {
-    transform: [{ translateX }],
-    opacity,
-  };
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <PanGestureHandler
-          onGestureEvent={onGestureEvent}
-          onHandlerStateChange={onHandlerStateChange}
-          activeOffsetX={[-10, 10]}
-          failOffsetY={[-5, 5]}
-        >
-          <Animated.View style={[styles.contentWrapper, animatedStyle]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <View style={styles.contentWrapper}>
             {/* Header fijo - siempre visible */}
             <View style={styles.header}>
               <View style={styles.headerContent}>
@@ -530,10 +389,8 @@ export const CalendarScreen: React.FC = () => {
             ) : (
               <View style={styles.emptySpace} />
             )}
-          </Animated.View>
-        </PanGestureHandler>
-      </SafeAreaView>
-    </GestureHandlerRootView>
+      </View>
+    </SafeAreaView>
   );
 };
 

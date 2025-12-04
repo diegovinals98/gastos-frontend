@@ -2,7 +2,7 @@
   "expo": {
     "name": "Factorial Gastos",
     "slug": "gastos",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "splash": {
@@ -17,7 +17,7 @@
       "icon": "./assets/icon_liquid.icon",
       "supportsTablet": true,
       "bundleIdentifier": "com.factorial.gastos",
-      "buildNumber": "3",
+      "buildNumber": "1",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Esta app necesita acceso a las notificaciones para recordarte sobre tus gastos.",
         "ITSAppUsesNonExemptEncryption": false
