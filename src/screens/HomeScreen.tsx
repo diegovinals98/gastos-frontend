@@ -556,52 +556,6 @@ export const HomeScreen: React.FC = () => {
     loadGastos(true); // Forzar refresh desde la API
   };
 
-  // Funciones para cambiar mes desde botones
-  const handlePreviousMonth = useCallback(() => {
-    if (month === 1) {
-      setYear(year - 1);
-      setMonth(12);
-    } else {
-      setMonth(month - 1);
-    }
-  }, [month, year]);
-
-  const handleNextMonth = useCallback(() => {
-    const currentDate = new Date();
-    const maxMonth = currentDate.getMonth() + 1;
-    const maxYear = currentDate.getFullYear();
-
-    // Si estamos en el mes actual, mostrar animación de rechazo
-    if (year === maxYear && month === maxMonth) {
-      // Animación de shake (rechazo)
-      shakeX.value = withTiming(-10, { duration: 50 }, () => {
-        'worklet';
-        shakeX.value = withTiming(10, { duration: 50 }, () => {
-          'worklet';
-          shakeX.value = withTiming(-10, { duration: 50 }, () => {
-            'worklet';
-            shakeX.value = withTiming(10, { duration: 50 }, () => {
-              'worklet';
-              shakeX.value = withTiming(0, { duration: 50 });
-            });
-          });
-        });
-      });
-      return;
-    }
-
-    if (year > maxYear || (year === maxYear && month >= maxMonth)) {
-      return; // Don't allow future months
-    }
-
-    if (month === 12) {
-      setYear(year + 1);
-      setMonth(1);
-    } else {
-      setMonth(month + 1);
-    }
-  }, [month, year]);
-
   // Función para cambiar el mes (se ejecuta desde runOnJS en gestos)
   const changeMonth = useCallback((direction: 'left' | 'right') => {
     const currentMonth = monthRef.current;
@@ -714,6 +668,17 @@ export const HomeScreen: React.FC = () => {
       });
     });
   }, [changeMonth, screenWidth]);
+
+  // Funciones para cambiar mes desde botones (usando las mismas animaciones que los gestos)
+  const handlePreviousMonth = useCallback(() => {
+    // Swipe right = mes anterior
+    animateMonthChange('right');
+  }, [animateMonthChange]);
+
+  const handleNextMonth = useCallback(() => {
+    // Swipe left = mes siguiente
+    animateMonthChange('left');
+  }, [animateMonthChange]);
 
   // Crear el gesto Pan
   const panGesture = Gesture.Pan()
