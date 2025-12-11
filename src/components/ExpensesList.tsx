@@ -75,7 +75,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
       onScrollToIndexFailed={(info) => {
         // Si falla el scroll, intentar después de un delay
         setTimeout(() => {
-          flatListRef?.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+          flatListRef?.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
         }, 100);
       }}
     />

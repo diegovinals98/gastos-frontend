@@ -14,6 +14,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { CalendarScreen } from './src/screens/CalendarScreen';
@@ -151,9 +152,10 @@ export default function App() {
 
   // Si está autenticado, mostrar navegación
   return (
-    <NavigationContainer>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Tab.Navigator
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <Tab.Navigator
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: '#3b82f6',
@@ -201,7 +203,8 @@ export default function App() {
         />
         
       </Tab.Navigator>
-    </NavigationContainer>
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }
 

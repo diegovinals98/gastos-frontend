@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,39 +38,6 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
   const isReversed = status === 'reverse';
   const isComplete = status === 'complete';
   const isPending = !status || status === 'pending' || (!isRejected && !isRefunded && !isReversed && !isComplete);
-  
-  // Animación simple: más grande y luego más pequeño
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (isHighlighted) {
-      console.log('✨ [ExpenseItem] Gasto resaltado detectado! ID:', gasto.id);
-      
-      // Resetear valor antes de animar
-      scaleAnim.setValue(1);
-      
-      // Animación simple: grande -> pequeño
-      Animated.sequence([
-        // Hacer más grande
-        Animated.timing(scaleAnim, {
-          toValue: 1.15,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        // Volver a tamaño normal
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        console.log('✅ [ExpenseItem] Animación completada para gasto:', gasto.id);
-      });
-    } else {
-      // Resetear animación cuando no está resaltado
-      scaleAnim.setValue(1);
-    }
-  }, [isHighlighted]);
 
   // Detectar si es modo oscuro
   const isDarkMode = theme.background === '#111827';
@@ -155,7 +122,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
       activeOpacity={0.7}
       onPress={handlePress}
     >
-      <Animated.View style={[
+      <View style={[
         styles.container, 
         { 
           backgroundColor: statusStyles.containerBg,
@@ -163,9 +130,6 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
           borderWidth: statusStyles.borderWidth,
           shadowColor: theme.shadow,
           opacity: statusStyles.opacity,
-          transform: [
-            { scale: scaleAnim }
-          ],
         }
       ]}>
       {/* Icono de estado a la izquierda */}
@@ -213,7 +177,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
           {isRefunded ? '+' : '-'}{amount.toFixed(2)} €
         </Text>
       </View>
-    </Animated.View>
+    </View>
     </TouchableOpacity>
   );
 };

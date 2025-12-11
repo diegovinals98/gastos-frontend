@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   SafeAreaView,
@@ -7,13 +7,19 @@ import {
   AppStateStatus,
   useColorScheme,
   View,
-  Animated,
   Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { BalanceCard } from '../components/BalanceCard';
 import { ExpensesList } from '../components/ExpensesList';
 import { MonthSelector } from '../components/MonthSelector';
@@ -46,11 +52,21 @@ export const HomeScreen: React.FC = () => {
   const flatListRef = useRef<any>(null);
   const navigateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Animation values for swipe gestures
-  const translateX = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-  const isAnimating = useRef(false);
+  // Refs para acceder a los valores actuales en worklets
+  const monthRef = useRef(month);
+  const yearRef = useRef(year);
+  
+  // Actualizar refs cuando cambian los valores
+  useEffect(() => {
+    monthRef.current = month;
+    yearRef.current = year;
+  }, [month, year]);
+  
+  // Valores animados para gestos
   const screenWidth = Dimensions.get('window').width;
+  const translateX = useSharedValue(0);
+  const opacity = useSharedValue(1);
+  const isAnimating = useSharedValue(false);
 
   // Función auxiliar para extraer ID de la notificación
   const extractIdFromNotification = (notification: any): string | null => {
@@ -119,7 +135,7 @@ export const HomeScreen: React.FC = () => {
           console.log('🎯 [loadGastos] Haciendo scroll al índice', index);
           setTimeout(() => {
             try {
-              flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+              flatListRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0.5 });
               console.log('✅ [loadGastos] Scroll completado');
             } catch (scrollError) {
               console.error('❌ [loadGastos] Error al hacer scroll:', scrollError);
@@ -202,7 +218,7 @@ export const HomeScreen: React.FC = () => {
           if (index !== -1 && flatListRef.current) {
             setTimeout(() => {
               try {
-                flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+                flatListRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0.5 });
                 console.log('✅ [NotificationReceived] Scroll completado');
               } catch (scrollError) {
                 console.error('❌ [NotificationReceived] Error al hacer scroll:', scrollError);
@@ -288,7 +304,7 @@ export const HomeScreen: React.FC = () => {
           if (index !== -1 && flatListRef.current) {
             setTimeout(() => {
               try {
-                flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+                flatListRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0.5 });
                 console.log('✅ [NotificationResponse] Scroll completado');
               } catch (scrollError) {
                 console.error('❌ [NotificationResponse] Error al hacer scroll:', scrollError);
@@ -376,189 +392,156 @@ export const HomeScreen: React.FC = () => {
     loadGastos();
   };
 
-  const handlePreviousMonth = (skipAnimationCheck = false) => {
-    console.log('🔄 handlePreviousMonth called, current month:', month, 'year:', year);
-    if (!skipAnimationCheck && isAnimating.current) {
-      console.log('⏸️ Animation in progress, skipping');
-      return;
-    }
+  // Funciones para cambiar mes desde botones
+  const handlePreviousMonth = useCallback(() => {
     if (month === 1) {
-      console.log('📅 Changing to December of previous year');
-      setMonth(12);
       setYear(year - 1);
+      setMonth(12);
     } else {
-      console.log('📅 Changing to previous month:', month - 1);
       setMonth(month - 1);
     }
-  };
+  }, [month, year]);
 
-  const handleNextMonth = (skipAnimationCheck = false) => {
-    console.log('🔄 handleNextMonth called, current month:', month, 'year:', year);
-    if (!skipAnimationCheck && isAnimating.current) {
-      console.log('⏸️ Animation in progress, skipping');
-      return;
-    }
+  const handleNextMonth = useCallback(() => {
     const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentYear = currentDate.getFullYear();
+    const maxMonth = currentDate.getMonth() + 1;
+    const maxYear = currentDate.getFullYear();
 
-    if (year > currentYear || (year === currentYear && month >= currentMonth)) {
-      console.log('⛔ Cannot go to future months');
+    if (year > maxYear || (year === maxYear && month >= maxMonth)) {
       return; // Don't allow future months
     }
 
     if (month === 12) {
-      console.log('📅 Changing to January of next year');
-      setMonth(1);
       setYear(year + 1);
+      setMonth(1);
     } else {
-      console.log('📅 Changing to next month:', month + 1);
       setMonth(month + 1);
     }
-  };
+  }, [month, year]);
 
-  // Animate month change
-  const animateMonthChange = (direction: 'left' | 'right', callback: () => void) => {
-    if (isAnimating.current) return;
-    isAnimating.current = true;
+  // Función para cambiar el mes (se ejecuta desde runOnJS en gestos)
+  const changeMonth = useCallback((direction: 'left' | 'right') => {
+    const currentMonth = monthRef.current;
+    const currentYear = yearRef.current;
+    
+    if (direction === 'right') {
+      // Swipe right - mes anterior
+      if (currentMonth === 1) {
+        setYear(currentYear - 1);
+        setMonth(12);
+      } else {
+        setMonth(currentMonth - 1);
+      }
+    } else {
+      // Swipe left - mes siguiente
+      const currentDate = new Date();
+      const maxMonth = currentDate.getMonth() + 1;
+      const maxYear = currentDate.getFullYear();
+      
+      if (currentYear > maxYear || (currentYear === maxYear && currentMonth >= maxMonth)) {
+        return; // Don't allow future months
+      }
+      
+      if (currentMonth === 12) {
+        setYear(currentYear + 1);
+        setMonth(1);
+      } else {
+        setMonth(currentMonth + 1);
+      }
+    }
+  }, []);
+
+  // Función para animar el cambio de mes
+  const animateMonthChange = useCallback((direction: 'left' | 'right') => {
+    if (isAnimating.value) return;
+    isAnimating.value = true;
     
     const targetX = direction === 'left' ? -screenWidth : screenWidth;
     
-    // Flatten offset first
-    translateX.flattenOffset();
-    
-    // Animate out
-    Animated.parallel([
-      Animated.timing(translateX, {
-        toValue: targetX,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0.3,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Execute callback (change month) - this updates the state
-      callback();
+    // Animar salida
+    translateX.value = withTiming(targetX, { duration: 200 });
+    opacity.value = withTiming(0.3, { duration: 200 }, (finished) => {
+      'worklet';
+      if (!finished) return;
       
-      // Reset position from opposite side
-      translateX.setValue(direction === 'left' ? screenWidth : -screenWidth);
+      // Ejecutar callback (cambiar mes) en el hilo JS
+      runOnJS(changeMonth)(direction);
       
-      // Small delay to ensure state update
-      setTimeout(() => {
-        // Animate in
-        Animated.parallel([
-          Animated.spring(translateX, {
-            toValue: 0,
-            tension: 50,
-            friction: 7,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          isAnimating.current = false;
-          translateX.setOffset(0);
-        });
-      }, 50);
+      // Resetear posición desde el lado opuesto
+      translateX.value = direction === 'left' ? screenWidth : -screenWidth;
+      
+      // Animar entrada
+      translateX.value = withTiming(0, {
+        duration: 250,
+      });
+      opacity.value = withTiming(1, { duration: 250 }, (finished) => {
+        'worklet';
+        if (finished) {
+          isAnimating.value = false;
+        }
+      });
     });
-  };
+  }, [changeMonth, screenWidth]);
 
-  const onGestureEvent = Animated.event(
-    [{ nativeEvent: { translationX: translateX } }],
-    { 
-      useNativeDriver: true,
-      listener: (event: any) => {
-        // Update opacity based on translation during gesture
-        const translationXValue = event.nativeEvent.translationX;
-        const opacityValue = 1 - Math.min(Math.abs(translationXValue) / 200, 0.5);
-        opacity.setValue(opacityValue);
-      }
-    }
-  );
-
-  const onHandlerStateChange = (event: any) => {
-    const { state, translationX, velocityX, translationY } = event.nativeEvent;
-    
-    console.log('🎯 Gesture state changed:', state, 'translationX:', translationX, 'velocityX:', velocityX);
-    
-    if (state === State.BEGAN) {
-      // Reset when gesture begins
-      console.log('👆 Gesture began');
-      translateX.setOffset(0);
-      translateX.setValue(0);
-      opacity.setValue(1);
-    } else if (state === State.ACTIVE) {
-      // Gesture is active, update opacity
-      const absTranslationX = Math.abs(translationX);
-      const opacityValue = 1 - Math.min(absTranslationX / 200, 0.5);
-      opacity.setValue(opacityValue);
-    } else if (state === State.END) {
-      console.log('✅ Gesture ended, translationX:', translationX, 'velocityX:', velocityX);
+  // Crear el gesto Pan
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-20, 20])
+    .onStart(() => {
+      'worklet';
+      if (isAnimating.value) return;
+      translateX.value = 0;
+      opacity.value = 1;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      if (isAnimating.value) return;
+      translateX.value = event.translationX;
+      // Actualizar opacidad basada en la traducción
+      const opacityValue = 1 - Math.min(Math.abs(event.translationX) / 200, 0.5);
+      opacity.value = opacityValue;
+    })
+    .onEnd((event) => {
+      'worklet';
+      if (isAnimating.value) return;
+      
+      const { translationX, velocityX, translationY } = event;
       const absTranslationX = Math.abs(translationX);
       const absTranslationY = Math.abs(translationY || 0);
       const threshold = 50;
       const minVelocity = 300;
       
-      // Check if it's a horizontal swipe (more horizontal than vertical)
+      // Verificar si es un deslizamiento horizontal
       if (absTranslationX > absTranslationY && (absTranslationX > threshold || Math.abs(velocityX) > minVelocity)) {
         if (translationX > 0 || velocityX > 0) {
-          // Swipe right - go to previous month
-          console.log('➡️ Swipe right detected, going to previous month');
-          animateMonthChange('right', () => handlePreviousMonth(true));
+          // Swipe right - ir al mes anterior
+          runOnJS(animateMonthChange)('right');
         } else {
-          // Swipe left - go to next month
-          console.log('⬅️ Swipe left detected, going to next month');
-          animateMonthChange('left', () => handleNextMonth(true));
+          // Swipe left - ir al mes siguiente
+          runOnJS(animateMonthChange)('left');
         }
       } else {
-        // Not enough swipe or vertical swipe, spring back
-        console.log('↩️ Not enough swipe, springing back. absTranslationX:', absTranslationX, 'threshold:', threshold);
-        translateX.flattenOffset();
-        Animated.parallel([
-          Animated.spring(translateX, {
-            toValue: 0,
-            tension: 50,
-            friction: 7,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
-    } else if (state === State.CANCELLED || state === State.FAILED) {
-      console.log('❌ Gesture cancelled or failed');
-      translateX.flattenOffset();
-      Animated.parallel([
-        Animated.spring(translateX, {
-          toValue: 0,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
+        // No hay suficiente deslizamiento, volver a la posición original
+        translateX.value = withTiming(0, {
           duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  };
+        });
+        opacity.value = withTiming(1, { duration: 200 });
+      }
+    });
 
+  // Estilo animado
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+      opacity: opacity.value,
+    };
+  });
 
-  // Reset animation when month/year changes (from buttons)
+  // Resetear animación cuando cambia el mes/año (desde botones)
   useEffect(() => {
-    if (!isAnimating.current) {
-      translateX.setValue(0);
-      opacity.setValue(1);
+    if (!isAnimating.value) {
+      translateX.value = 0;
+      opacity.value = 1;
     }
   }, [month, year]);
 
@@ -582,62 +565,42 @@ export const HomeScreen: React.FC = () => {
     ? { background: '#111827', card: '#1f2937', text: '#f9fafb', textSecondary: '#9ca3af', border: '#374151', button: '#374151', error: '#ef4444' }
     : { background: '#f9fafb', card: '#ffffff', text: '#1f2937', textSecondary: '#6b7280', border: '#e5e7eb', button: '#f3f4f6', error: '#ef4444' };
 
-  const animatedStyle = {
-    transform: [{ translateX }],
-    opacity,
-  };
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <MonthSelector
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <MonthSelector
+        month={month}
+        year={year}
+        onPrevious={handlePreviousMonth}
+        onNext={handleNextMonth}
+      />
+      {gastosData && (
+        <BalanceCard
+          totalSpent={totalSpent}
+          companyBudget={COMPANY_BUDGET}
+          payrollBudget={PAYROLL_BUDGET}
           month={month}
           year={year}
-          onPrevious={handlePreviousMonth}
-          onNext={handleNextMonth}
         />
-        {gastosData && (
-          <BalanceCard
-            totalSpent={totalSpent}
-            companyBudget={COMPANY_BUDGET}
-            payrollBudget={PAYROLL_BUDGET}
-            month={month}
-            year={year}
+      )}
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.contentContainer, animatedStyle]}>
+          <ExpensesList 
+            gastos={gastosData?.gastos || []} 
+            isLoading={loading}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            highlightedExpenseId={highlightedExpenseId}
+            flatListRef={flatListRef}
           />
-        )}
-        <View style={styles.swipeableContent}>
-          <PanGestureHandler
-            onGestureEvent={onGestureEvent}
-            onHandlerStateChange={onHandlerStateChange}
-            activeOffsetX={[-10, 10]}
-            failOffsetY={[-20, 20]}
-            minPointers={1}
-            maxPointers={1}
-            avgTouches
-          >
-            <Animated.View style={[styles.contentContainer, animatedStyle]}>
-              <ExpensesList 
-                gastos={gastosData?.gastos || []} 
-                isLoading={loading}
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                highlightedExpenseId={highlightedExpenseId}
-                flatListRef={flatListRef}
-              />
-            </Animated.View>
-          </PanGestureHandler>
-        </View>
-      </SafeAreaView>
-    </GestureHandlerRootView>
+        </Animated.View>
+      </GestureDetector>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  swipeableContent: {
     flex: 1,
   },
   contentContainer: {
