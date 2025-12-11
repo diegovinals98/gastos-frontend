@@ -25,6 +25,7 @@ import { ExpensesList } from '../components/ExpensesList';
 import { MonthSelector } from '../components/MonthSelector';
 import { fetchGastos } from '../services/api';
 import { GastosResponse, Gasto } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   registerForPushNotificationsAsync,
 } from '../services/notifications';
@@ -67,6 +68,39 @@ export const HomeScreen: React.FC = () => {
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
   const isAnimating = useSharedValue(false);
+
+  // Función auxiliar para obtener la clave de almacenamiento
+  const getStorageKey = (month: number, year: number): string => {
+    return `@gastos_${year}_${month}`;
+  };
+
+  // Función para guardar gastos en AsyncStorage
+  const saveGastosToStorage = async (month: number, year: number, data: GastosResponse) => {
+    try {
+      const key = getStorageKey(month, year);
+      await AsyncStorage.setItem(key, JSON.stringify(data));
+      console.log('💾 [saveGastosToStorage] Gastos guardados para', month, year);
+    } catch (error) {
+      console.error('❌ [saveGastosToStorage] Error al guardar:', error);
+    }
+  };
+
+  // Función para cargar gastos desde AsyncStorage
+  const loadGastosFromStorage = async (month: number, year: number): Promise<GastosResponse | null> => {
+    try {
+      const key = getStorageKey(month, year);
+      const storedData = await AsyncStorage.getItem(key);
+      if (storedData) {
+        const data = JSON.parse(storedData) as GastosResponse;
+        console.log('📦 [loadGastosFromStorage] Gastos cargados desde storage para', month, year);
+        return data;
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ [loadGastosFromStorage] Error al cargar:', error);
+      return null;
+    }
+  };
 
   // Función auxiliar para extraer ID de la notificación
   const extractIdFromNotification = (notification: any): string | null => {
@@ -112,17 +146,49 @@ export const HomeScreen: React.FC = () => {
     return null;
   };
 
-  const loadGastos = async () => {
+  const loadGastos = async (forceRefresh: boolean = false) => {
     try {
       console.log('📥 [loadGastos] Iniciando carga de gastos...');
       console.log('📥 [loadGastos] Mes:', month, 'Año:', year);
       console.log('📥 [loadGastos] highlightedExpenseId actual:', highlightedExpenseId);
      
       setLoading(true);
+      
+      // Si no es un refresh forzado, intentar cargar desde storage primero
+      if (!forceRefresh) {
+        const cachedData = await loadGastosFromStorage(month, year);
+        if (cachedData) {
+          console.log('📦 [loadGastos] Mostrando datos en caché mientras se actualiza...');
+          setGastosData(cachedData);
+          setLoading(false); // Mostrar datos inmediatamente
+          
+          // Hacer scroll si hay un gasto resaltado
+          if (highlightedExpenseId && cachedData?.gastos) {
+            const index = cachedData.gastos.findIndex(g => String(g.id) === String(highlightedExpenseId));
+            if (index !== -1 && flatListRef.current) {
+              setTimeout(() => {
+                try {
+                  flatListRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0.5 });
+                } catch (scrollError) {
+                  console.error('❌ [loadGastos] Error al hacer scroll:', scrollError);
+                }
+              }, 100);
+            }
+          }
+        }
+      }
+      
+      // Siempre hacer la llamada a la API para obtener datos frescos
       const data = await fetchGastos(month, year);
-      console.log('📥 [loadGastos] Gastos recibidos:', data?.gastos?.length || 0);
+      console.log('📥 [loadGastos] Gastos recibidos de la API:', data?.gastos?.length || 0);
       console.log('📥 [loadGastos] IDs de gastos:', data?.gastos?.map(g => g.id) || []);
       
+      // Guardar en storage
+      if (data) {
+        await saveGastosToStorage(month, year, data);
+      }
+      
+      // Actualizar con datos frescos
       setGastosData(data);
       
       // Si hay un gasto para resaltar, hacer scroll a él después de un breve delay
@@ -149,11 +215,18 @@ export const HomeScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('❌ [loadGastos] Error loading gastos:', error);
-      Alert.alert(
-        'Error',
-        'No se pudieron cargar los gastos. Verifica que el servidor esté corriendo.',
-        [{ text: 'OK' }]
-      );
+      
+      // Si hay un error y no tenemos datos en caché, mostrar error
+      if (!gastosData) {
+        Alert.alert(
+          'Error',
+          'No se pudieron cargar los gastos. Verifica que el servidor esté corriendo.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        // Si tenemos datos en caché, solo mostrar un mensaje en consola
+        console.log('⚠️ [loadGastos] Error al actualizar, usando datos en caché');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -389,7 +462,7 @@ export const HomeScreen: React.FC = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadGastos();
+    loadGastos(true); // Forzar refresh desde la API
   };
 
   // Funciones para cambiar mes desde botones
