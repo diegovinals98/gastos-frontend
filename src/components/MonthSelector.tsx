@@ -9,6 +9,7 @@ interface MonthSelectorProps {
   year: number;
   onPrevious: () => void;
   onNext: () => void;
+  isNextDisabled?: boolean;
 }
 
 export const MonthSelector: React.FC<MonthSelectorProps> = ({
@@ -16,6 +17,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
   year,
   onPrevious,
   onNext,
+  isNextDisabled = false,
 }) => {
   const theme = useTheme();
   const monthName = format(new Date(year, month - 1), 'MMMM yyyy', { locale: es });
@@ -29,7 +31,17 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
       
       <Text style={[styles.monthText, { color: theme.text }]}>{capitalizedMonth}</Text>
       
-      <TouchableOpacity onPress={onNext} style={[styles.button, { backgroundColor: theme.button }]}>
+      <TouchableOpacity 
+        onPress={onNext} 
+        disabled={isNextDisabled}
+        style={[
+          styles.button, 
+          { 
+            backgroundColor: theme.button,
+            opacity: isNextDisabled ? 0.3 : 1,
+          }
+        ]}
+      >
         <Text style={[styles.buttonText, { color: theme.text }]}>›</Text>
       </TouchableOpacity>
     </View>

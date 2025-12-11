@@ -68,6 +68,9 @@ export const HomeScreen: React.FC = () => {
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
   const isAnimating = useSharedValue(false);
+  
+  // Valor animado para la animación de rechazo
+  const shakeX = useSharedValue(0);
 
   // Función auxiliar para obtener la clave de almacenamiento
   const getStorageKey = (month: number, year: number): string => {
@@ -99,6 +102,81 @@ export const HomeScreen: React.FC = () => {
     } catch (error) {
       console.error('❌ [loadGastosFromStorage] Error al cargar:', error);
       return null;
+    }
+  };
+
+  // Función para verificar si ya se hizo la precarga inicial
+  const hasInitialPreload = async (): Promise<boolean> => {
+    try {
+      const value = await AsyncStorage.getItem('@gastos_initial_preload');
+      return value === 'true';
+    } catch (error) {
+      console.error('❌ [hasInitialPreload] Error:', error);
+      return false;
+    }
+  };
+
+  // Función para marcar que se hizo la precarga inicial
+  const markInitialPreload = async () => {
+    try {
+      await AsyncStorage.setItem('@gastos_initial_preload', 'true');
+      console.log('✅ [markInitialPreload] Precarga inicial marcada');
+    } catch (error) {
+      console.error('❌ [markInitialPreload] Error:', error);
+    }
+  };
+
+  // Función para precargar todos los meses (últimos 6 meses + mes actual)
+  const preloadAllGastos = async () => {
+    try {
+      console.log('🚀 [preloadAllGastos] Iniciando precarga de todos los gastos...');
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentYear = currentDate.getFullYear();
+      
+      // Precargar los últimos 6 meses + el mes actual
+      const monthsToPreload: Array<{ month: number; year: number }> = [];
+      
+      for (let i = 0; i <= 6; i++) {
+        let month = currentMonth - i;
+        let year = currentYear;
+        
+        // Ajustar si el mes es negativo
+        while (month <= 0) {
+          month += 12;
+          year -= 1;
+        }
+        
+        monthsToPreload.push({ month, year });
+      }
+      
+      console.log('📅 [preloadAllGastos] Meses a precargar:', monthsToPreload);
+      
+      // Cargar todos los meses en paralelo
+      const promises = monthsToPreload.map(async ({ month, year }) => {
+        try {
+          // Verificar si ya está en caché
+          const cached = await loadGastosFromStorage(month, year);
+          if (cached) {
+            console.log(`✅ [preloadAllGastos] ${month}/${year} ya está en caché`);
+            return;
+          }
+          
+          // Cargar desde la API
+          console.log(`📥 [preloadAllGastos] Cargando ${month}/${year} desde la API...`);
+          const data = await fetchGastos(month, year);
+          await saveGastosToStorage(month, year, data);
+          console.log(`✅ [preloadAllGastos] ${month}/${year} cargado y guardado`);
+        } catch (error) {
+          console.error(`❌ [preloadAllGastos] Error al cargar ${month}/${year}:`, error);
+        }
+      });
+      
+      await Promise.all(promises);
+      await markInitialPreload();
+      console.log('✅ [preloadAllGastos] Precarga completada');
+    } catch (error) {
+      console.error('❌ [preloadAllGastos] Error en la precarga:', error);
     }
   };
 
@@ -445,6 +523,19 @@ export const HomeScreen: React.FC = () => {
     loadGastos();
   }, [month, year]);
 
+  // Precargar todos los gastos la primera vez
+  useEffect(() => {
+    const checkAndPreload = async () => {
+      const hasPreloaded = await hasInitialPreload();
+      if (!hasPreloaded) {
+        console.log('🔄 [HomeScreen] Primera carga, precargando todos los gastos...');
+        // Precargar en segundo plano sin bloquear la UI
+        preloadAllGastos();
+      }
+    };
+    checkAndPreload();
+  }, []);
+
   // Efecto para navegar cuando los gastos estén disponibles y haya una navegación pendiente
   useEffect(() => {
     if (pendingNavigationId && gastosData?.gastos) {
@@ -480,6 +571,25 @@ export const HomeScreen: React.FC = () => {
     const maxMonth = currentDate.getMonth() + 1;
     const maxYear = currentDate.getFullYear();
 
+    // Si estamos en el mes actual, mostrar animación de rechazo
+    if (year === maxYear && month === maxMonth) {
+      // Animación de shake (rechazo)
+      shakeX.value = withTiming(-10, { duration: 50 }, () => {
+        'worklet';
+        shakeX.value = withTiming(10, { duration: 50 }, () => {
+          'worklet';
+          shakeX.value = withTiming(-10, { duration: 50 }, () => {
+            'worklet';
+            shakeX.value = withTiming(10, { duration: 50 }, () => {
+              'worklet';
+              shakeX.value = withTiming(0, { duration: 50 });
+            });
+          });
+        });
+      });
+      return;
+    }
+
     if (year > maxYear || (year === maxYear && month >= maxMonth)) {
       return; // Don't allow future months
     }
@@ -511,6 +621,25 @@ export const HomeScreen: React.FC = () => {
       const maxMonth = currentDate.getMonth() + 1;
       const maxYear = currentDate.getFullYear();
       
+      // Si estamos en el mes actual, mostrar animación de rechazo
+      if (currentYear === maxYear && currentMonth === maxMonth) {
+        // Animación de shake (rechazo) desde el gesto
+        shakeX.value = withTiming(-10, { duration: 50 }, () => {
+          'worklet';
+          shakeX.value = withTiming(10, { duration: 50 }, () => {
+            'worklet';
+            shakeX.value = withTiming(-10, { duration: 50 }, () => {
+              'worklet';
+              shakeX.value = withTiming(10, { duration: 50 }, () => {
+                'worklet';
+                shakeX.value = withTiming(0, { duration: 50 });
+              });
+            });
+          });
+        });
+        return;
+      }
+      
       if (currentYear > maxYear || (currentYear === maxYear && currentMonth >= maxMonth)) {
         return; // Don't allow future months
       }
@@ -527,8 +656,38 @@ export const HomeScreen: React.FC = () => {
   // Función para animar el cambio de mes
   const animateMonthChange = useCallback((direction: 'left' | 'right') => {
     if (isAnimating.value) return;
-    isAnimating.value = true;
     
+    // Verificar si estamos intentando ir al mes siguiente desde el mes actual
+    const currentMonth = monthRef.current;
+    const currentYear = yearRef.current;
+    const currentDate = new Date();
+    const maxMonth = currentDate.getMonth() + 1;
+    const maxYear = currentDate.getFullYear();
+    
+    if (direction === 'left' && currentYear === maxYear && currentMonth === maxMonth) {
+      // Mostrar animación de rechazo
+      shakeX.value = withTiming(-10, { duration: 50 }, () => {
+        'worklet';
+        shakeX.value = withTiming(10, { duration: 50 }, () => {
+          'worklet';
+          shakeX.value = withTiming(-10, { duration: 50 }, () => {
+            'worklet';
+            shakeX.value = withTiming(10, { duration: 50 }, () => {
+              'worklet';
+              shakeX.value = withTiming(0, { duration: 50 });
+            });
+          });
+        });
+      });
+      // También hacer un pequeño rebote en el contenido
+      translateX.value = withTiming(-20, { duration: 100 }, () => {
+        'worklet';
+        translateX.value = withTiming(0, { duration: 150 });
+      });
+      return;
+    }
+    
+    isAnimating.value = true;
     const targetX = direction === 'left' ? -screenWidth : screenWidth;
     
     // Animar salida
@@ -602,13 +761,28 @@ export const HomeScreen: React.FC = () => {
       }
     });
 
-  // Estilo animado
+  // Estilo animado para el contenido
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateX: translateX.value }],
       opacity: opacity.value,
     };
   });
+
+  // Estilo animado para el shake del MonthSelector
+  const shakeAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: shakeX.value }],
+    };
+  });
+
+  // Verificar si estamos en el mes actual
+  const isCurrentMonth = () => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    return year === currentYear && month === currentMonth;
+  };
 
   // Resetear animación cuando cambia el mes/año (desde botones)
   useEffect(() => {
@@ -641,12 +815,15 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <MonthSelector
-        month={month}
-        year={year}
-        onPrevious={handlePreviousMonth}
-        onNext={handleNextMonth}
-      />
+      <Animated.View style={shakeAnimatedStyle}>
+        <MonthSelector
+          month={month}
+          year={year}
+          onPrevious={handlePreviousMonth}
+          onNext={handleNextMonth}
+          isNextDisabled={isCurrentMonth()}
+        />
+      </Animated.View>
       {gastosData && (
         <BalanceCard
           totalSpent={totalSpent}
