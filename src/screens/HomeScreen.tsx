@@ -798,6 +798,7 @@ export const HomeScreen: React.FC = () => {
           year={year}
         />
       )}
+      
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.contentContainer, animatedStyle]}>
           <ExpensesList 

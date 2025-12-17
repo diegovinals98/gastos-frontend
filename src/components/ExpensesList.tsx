@@ -19,9 +19,24 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
   refreshing = false,
   onRefresh,
   highlightedExpenseId,
-  flatListRef
+  flatListRef,
 }) => {
   const theme = useTheme();
+  const [displayedItems, setDisplayedItems] = React.useState(20); // Infinite scroll: mostrar 20 items inicialmente
+  const ITEMS_PER_PAGE = 20;
+
+  // Resetear cuando cambian los gastos
+  React.useEffect(() => {
+    setDisplayedItems(20);
+  }, [gastos.length]);
+
+  const handleLoadMore = () => {
+    if (displayedItems < gastos.length) {
+      setDisplayedItems(prev => Math.min(prev + ITEMS_PER_PAGE, gastos.length));
+    }
+  };
+
+  const itemsToDisplay = gastos.slice(0, displayedItems);
 
   if (isLoading && !refreshing) {
     return (
@@ -36,7 +51,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
   return (
     <FlatList
       ref={flatListRef}
-      data={gastos}
+      data={itemsToDisplay}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => {
         const isHighlighted = highlightedExpenseId !== null && String(item.id) === String(highlightedExpenseId);
@@ -61,6 +76,15 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
           </View>
         ) : null
       }
+      ListFooterComponent={
+        displayedItems < gastos.length ? (
+          <View style={styles.loadMoreContainer}>
+            <Text style={[styles.loadMoreText, { color: theme.textSecondary }]}>
+              Mostrando {displayedItems} de {gastos.length} gastos
+            </Text>
+          </View>
+        ) : null
+      }
       showsVerticalScrollIndicator={false}
       refreshControl={
         onRefresh ? (
@@ -68,10 +92,16 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
             refreshing={refreshing} 
             onRefresh={onRefresh}
             tintColor={theme.textSecondary}
+            colors={['#3b82f6']}
+            progressBackgroundColor={theme.card}
+            title="Actualizando..."
+            titleColor={theme.textSecondary}
           />
         ) : undefined
       }
       style={styles.flatList}
+      onEndReached={handleLoadMore}
+      onEndReachedThreshold={0.5}
       onScrollToIndexFailed={(info) => {
         // Si falla el scroll, intentar después de un delay
         setTimeout(() => {
@@ -109,6 +139,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginHorizontal: 16,
     marginVertical: 6,
+  },
+  loadMoreContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    fontSize: 14,
   },
 });
 

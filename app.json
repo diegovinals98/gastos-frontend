@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Factorial Gastos",
+    "name": "VICA",
     "slug": "gastos",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "splash": {
