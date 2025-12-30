@@ -21,6 +21,7 @@ import { CalendarScreen } from './src/screens/CalendarScreen';
 import { ExpenseDetailScreen } from './src/screens/ExpenseDetailScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
+import { SpeedtestScreen } from './src/screens/SpeedtestScreen';
 import { useTheme } from './src/config/theme';
 import { Gasto } from './src/types';
 
@@ -123,6 +124,16 @@ function AppContent() {
                 tabBarLabel: 'Calendario',
                 tabBarIcon: ({ color, size }) => (
                   <Ionicons name="calendar-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tab.Screen 
+              name="Speedtest" 
+              component={SpeedtestScreen}
+              options={{
+                tabBarLabel: 'Speedtest',
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="speedometer-outline" size={size} color={color} />
                 ),
               }}
             />

@@ -31,6 +31,7 @@ import {
 } from '../services/notifications';
 import { COMPANY_BUDGET, PAYROLL_BUDGET } from '../config/env';
 import * as Notifications from 'expo-notifications';
+import * as Linking from 'expo-linking';
 
 type RootStackParamList = {
   Home: undefined;
@@ -425,6 +426,23 @@ export const HomeScreen: React.FC = () => {
                      (typeof notificationData.type === 'string' ? notificationData.type.toLowerCase() : '') ||
                      '';
       console.log('👆 [NotificationResponse] Estado de la notificación:', status);
+      
+      // Si el tipo es "speedtest", abrir la URL
+      if (notificationData.type === 'speedtest' && notificationData.url) {
+        console.log('🚀 [NotificationResponse] Tipo speedtest detectado, abriendo URL:', notificationData.url);
+        try {
+          const canOpen = await Linking.canOpenURL(notificationData.url as string);
+          if (canOpen) {
+            await Linking.openURL(notificationData.url as string);
+            console.log('✅ [NotificationResponse] URL abierta exitosamente');
+          } else {
+            console.error('❌ [NotificationResponse] No se puede abrir la URL:', notificationData.url);
+          }
+        } catch (error) {
+          console.error('❌ [NotificationResponse] Error al abrir URL:', error);
+        }
+        return; // No continuar con el procesamiento normal de la notificación
+      }
       
       // Extraer el ID del gasto de la notificación
       console.log('👆 [NotificationResponse] Intentando extraer ID...');

@@ -44,3 +44,34 @@ export interface RegisterCredentials {
   password: string;
 }
 
+// Speedtest Types
+export interface SpeedtestResult {
+  id: string;
+  downloadSpeed: number; // en Mbps
+  uploadSpeed: number; // en Mbps
+  ping: number; // en ms
+  timestamp: string; // ISO date string
+  server?: string;
+  location?: string;
+}
+
+export interface SpeedtestSummary {
+  latest?: SpeedtestResult;
+  average?: {
+    downloadSpeed: number;
+    uploadSpeed: number;
+    ping: number;
+  };
+  totalTests?: number;
+}
+
+export interface SpeedtestHistoryResponse {
+  results: SpeedtestResult[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+

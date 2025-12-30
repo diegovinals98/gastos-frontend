@@ -1,4 +1,4 @@
-import { GastosResponse } from '../types';
+import { GastosResponse, SpeedtestSummary, SpeedtestHistoryResponse } from '../types';
 import { API_URL } from '../config/env';
 import { getToken, removeToken, removeUser } from './auth';
 
@@ -344,6 +344,40 @@ export const saveCardId = async (cardId: string): Promise<void> => {
     console.log('📄 Respuesta del servidor:', JSON.stringify(responseData, null, 2));
   } catch (error) {
     console.error('❌ Error guardando número de tarjeta:', error);
+    throw error;
+  }
+};
+
+export const fetchSpeedtestSummary = async (): Promise<SpeedtestSummary> => {
+  try {
+    const response = await authenticatedFetch('/speedtest/summary');
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || `Error fetching speedtest summary: ${response.statusText}`);
+    }
+    
+    const data: SpeedtestSummary = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching speedtest summary:', error);
+    throw error;
+  }
+};
+
+export const fetchSpeedtestHistory = async (page: number = 1, pageSize: number = 10): Promise<SpeedtestHistoryResponse> => {
+  try {
+    const response = await authenticatedFetch(`/speedtest/history?page=${page}&pageSize=${pageSize}`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || `Error fetching speedtest history: ${response.statusText}`);
+    }
+    
+    const data: SpeedtestHistoryResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching speedtest history:', error);
     throw error;
   }
 };
