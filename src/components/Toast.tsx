@@ -1,5 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import React, { useEffect, useRef, useCallback } from 'react';
+import { Text, StyleSheet, Dimensions } from 'react-native';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { useTheme } from '../config/theme';
 
 const { width } = Dimensions.get('window');
@@ -19,67 +26,110 @@ export const Toast: React.FC<ToastProps> = ({
   duration = 3000,
   type = 'error'
 }) => {
-  const translateY = useRef(new Animated.Value(-100)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useSharedValue(-100);
+  const opacity = useSharedValue(0);
   const theme = useTheme();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const SWIPE_THRESHOLD = -50; // 50px hacia arriba para cerrar
   
   const backgroundColor = type === 'success' 
     ? (theme.success || '#10b981')
     : (theme.error || '#ef4444');
 
+  const cancelTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const hideToast = useCallback(() => {
+    translateY.value = withTiming(-100, { duration: 300 });
+    opacity.value = withTiming(0, { duration: 300 });
+    // Llamar onHide después de un pequeño delay para que la animación termine
+    setTimeout(() => {
+      onHide();
+    }, 300);
+  }, [onHide]);
+
+  const handleSwipeToDismiss = useCallback(() => {
+    cancelTimer();
+    hideToast();
+  }, [cancelTimer, hideToast]);
+
   useEffect(() => {
     if (visible) {
       // Mostrar toast
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      translateY.value = withTiming(0, { duration: 300 });
+      opacity.value = withTiming(1, { duration: 300 });
 
       // Ocultar toast después de la duración
-      const timer = setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(translateY, {
-            toValue: -100,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          onHide();
-        });
+      timerRef.current = setTimeout(() => {
+        if (timerRef.current) {
+          hideToast();
+        }
       }, duration);
 
-      return () => clearTimeout(timer);
+      return () => {
+        cancelTimer();
+      };
+    } else {
+      // Resetear posición cuando no es visible
+      translateY.value = -100;
+      opacity.value = 0;
+      cancelTimer();
     }
-  }, [visible, duration, translateY, opacity, onHide]);
+  }, [visible, duration]);
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetY([-10, 10]) // Activar solo con movimiento vertical
+    .failOffsetX([-50, 50]) // Fallar si hay mucho movimiento horizontal
+    .onStart(() => {
+      // Cancelar timer cuando el usuario empieza a deslizar
+      runOnJS(cancelTimer)();
+    })
+    .onUpdate((e) => {
+      // Solo permitir deslizamiento hacia arriba (translationY negativo)
+      if (e.translationY < 0) {
+        translateY.value = e.translationY;
+        // Reducir opacidad mientras se desliza (más suave)
+        opacity.value = Math.max(0.3, 1 + e.translationY / 150);
+      }
+    })
+    .onEnd((e) => {
+      if (e.translationY < SWIPE_THRESHOLD) {
+        // Deslizó suficiente hacia arriba, cerrar toast
+        runOnJS(handleSwipeToDismiss)();
+      } else {
+        // No deslizó suficiente, volver a posición original
+        translateY.value = withTiming(0, { duration: 200 });
+        opacity.value = withTiming(1, { duration: 200 });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+      opacity: opacity.value,
+    };
+  });
 
   if (!visible) return null;
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          transform: [{ translateY }],
-          opacity,
-          backgroundColor,
-        },
-      ]}
-    >
-      <Text style={styles.text}>{message}</Text>
-    </Animated.View>
+    <GestureDetector gesture={panGesture}>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            backgroundColor,
+          },
+          animatedStyle,
+        ]}
+      >
+        <Text style={styles.text}>{message}</Text>
+      </Animated.View>
+    </GestureDetector>
   );
 };
 

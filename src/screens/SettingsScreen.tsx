@@ -562,36 +562,36 @@ export const SettingsScreen: React.FC = () => {
             </View>
           ) : (
             <>
-              <View style={styles.toggleContainer}>
-                <View style={styles.toggleRow}>
-                  <View style={styles.toggleInfo}>
-                    <Text style={[styles.toggleLabel, { color: theme.text }]}>
-                      Notificaciones Push
-                    </Text>
-                    <Text style={[styles.toggleDescription, { color: theme.textSecondary }]}>
-                      {notificationsEnabled 
-                        ? 'Recibirás notificaciones sobre tus gastos' 
-                        : 'No recibirás notificaciones push'}
-                    </Text>
-                  </View>
-                  <Switch
-                    value={notificationsEnabled}
-                    onValueChange={handleToggleNotifications}
-                    disabled={togglingNotifications}
-                    trackColor={{ false: theme.border, true: '#3b82f6' }}
-                    thumbColor={notificationsEnabled ? '#ffffff' : theme.textSecondary}
-                    ios_backgroundColor={theme.border}
-                  />
+            <View style={styles.toggleContainer}>
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <Text style={[styles.toggleLabel, { color: theme.text }]}>
+                    Notificaciones Push
+                  </Text>
+                  <Text style={[styles.toggleDescription, { color: theme.textSecondary }]}>
+                    {notificationsEnabled 
+                      ? 'Recibirás notificaciones sobre tus gastos' 
+                      : 'No recibirás notificaciones push'}
+                  </Text>
                 </View>
-                {togglingNotifications && (
-                  <View style={styles.toggleLoading}>
-                    <ActivityIndicator color={theme.textSecondary} size="small" />
-                    <Text style={[styles.toggleLoadingText, { color: theme.textSecondary }]}>
-                      {notificationsEnabled ? 'Desactivando...' : 'Activando...'}
-                    </Text>
-                  </View>
-                )}
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={handleToggleNotifications}
+                  disabled={togglingNotifications}
+                  trackColor={{ false: theme.border, true: '#3b82f6' }}
+                  thumbColor={notificationsEnabled ? '#ffffff' : theme.textSecondary}
+                  ios_backgroundColor={theme.border}
+                />
               </View>
+              {togglingNotifications && (
+                <View style={styles.toggleLoading}>
+                  <ActivityIndicator color={theme.textSecondary} size="small" />
+                  <Text style={[styles.toggleLoadingText, { color: theme.textSecondary }]}>
+                    {notificationsEnabled ? 'Desactivando...' : 'Activando...'}
+                  </Text>
+                </View>
+              )}
+            </View>
               <TouchableOpacity
                 style={[
                   styles.secondaryButton,

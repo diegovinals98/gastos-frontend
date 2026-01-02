@@ -22,6 +22,7 @@ import { ExpenseDetailScreen } from './src/screens/ExpenseDetailScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
 import { SpeedtestScreen } from './src/screens/SpeedtestScreen';
+import { RumiScreen } from './src/screens/RumiScreen';
 import { useTheme } from './src/config/theme';
 import { Gasto } from './src/types';
 
@@ -134,6 +135,16 @@ function AppContent() {
                 tabBarLabel: 'Speedtest',
                 tabBarIcon: ({ color, size }) => (
                   <Ionicons name="speedometer-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tab.Screen 
+              name="Rumi" 
+              component={RumiScreen}
+              options={{
+                tabBarLabel: 'RUMI',
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="game-controller-outline" size={size} color={color} />
                 ),
               }}
             />
