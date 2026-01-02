@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { savePushToken } from './api';
 
@@ -41,7 +41,6 @@ export async function registerForPushNotificationsAsync() {
     }
     
     if (finalStatus !== 'granted') {
-      Alert.alert('Permisos', 'No se pudieron obtener los permisos para notificaciones');
       console.error('❌ No se pudieron obtener los permisos para notificaciones');
       return;
     }

@@ -6,7 +6,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   useColorScheme,
   KeyboardAvoidingView,
@@ -17,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../config/theme';
+import { Toast } from '../components/Toast';
 
 interface RegisterScreenProps {
   navigation: any;
@@ -29,6 +29,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('error');
   const { register } = useAuth();
   const colorScheme = useColorScheme();
   const theme = useTheme();
@@ -38,24 +41,30 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
     return emailRegex.test(email);
   };
 
+  const showToast = (message: string, type: 'success' | 'error' = 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
   const handleRegister = async () => {
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      showToast('Por favor completa todos los campos', 'error');
       return;
     }
 
     if (!validateEmail(email)) {
-      Alert.alert('Error', 'Por favor ingresa un email válido');
+      showToast('Por favor ingresa un email válido', 'error');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      showToast('La contraseña debe tener al menos 6 caracteres', 'error');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      showToast('Las contraseñas no coinciden', 'error');
       return;
     }
 
@@ -64,7 +73,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
       await register({ email: email.trim(), password });
       // Navigation will be handled by App.tsx based on auth state
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al registrar usuario');
+      showToast(error.message || 'Error al registrar usuario', 'error');
     } finally {
       setLoading(false);
     }
@@ -73,6 +82,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+        duration={3000}
+        type={toastType}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}

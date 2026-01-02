@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   SafeAreaView,
@@ -8,18 +8,27 @@ import {
   useColorScheme,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../config/theme';
 import { fetchSpeedtestSummary, fetchSpeedtestHistory } from '../services/api';
 import { SpeedtestSummary, SpeedtestResult, SpeedtestHistoryResponse } from '../types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 
-const { width } = Dimensions.get('window');
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 export const SpeedtestScreen: React.FC = () => {
   const [summary, setSummary] = useState<SpeedtestSummary | null>(null);
@@ -96,38 +105,16 @@ export const SpeedtestScreen: React.FC = () => {
   const formatDate = (dateString: string): string => {
     try {
       if (!dateString) return '';
-      
       let dateStr = dateString.trim();
-      const originalStr = dateStr;
-      
-      // Si no tiene indicador de zona horaria, asumimos que es UTC
       if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('-', 10)) {
         dateStr = dateStr + 'Z';
       }
-      
-      // Crear fecha desde string UTC - new Date() automáticamente convierte a hora local
       const localDate = new Date(dateStr);
-      
-      // Verificar que la fecha es válida
       if (isNaN(localDate.getTime())) {
-        console.warn('Fecha inválida:', originalStr);
         return dateString;
       }
-      
-      // Debug: verificar la conversión
-      const utcDate = new Date(dateStr);
-      const utcHours = utcDate.getUTCHours();
-      const localHours = localDate.getHours();
-      const offset = localHours - utcHours;
-      
-      if (offset !== 0) {
-        console.log(`📅 UTC: ${originalStr} → Local: ${format(localDate, "d 'de' MMMM, yyyy", { locale: es })} (offset: ${offset}h)`);
-      }
-      
-      // Usar format de date-fns que respeta la zona horaria local del objeto Date
       return format(localDate, "d 'de' MMMM, yyyy", { locale: es });
     } catch (error) {
-      console.error('Error formateando fecha:', error, dateString);
       return dateString;
     }
   };
@@ -135,130 +122,219 @@ export const SpeedtestScreen: React.FC = () => {
   const formatTime = (dateString: string): string => {
     try {
       let dateStr = dateString.trim();
-      const originalStr = dateStr;
-      
-      // Si no tiene indicador de zona horaria, asumimos que es UTC
       if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('-', 10)) {
         dateStr = dateStr + 'Z';
       }
-      
-      // Crear fecha desde string UTC - new Date() automáticamente convierte a hora local
-      // Cuando pasas un string con 'Z', JavaScript lo interpreta como UTC y lo convierte
-      // automáticamente a la zona horaria local del dispositivo
       const localDate = new Date(dateStr);
-      
-      // Verificar que la fecha es válida
       if (isNaN(localDate.getTime())) {
-        console.warn('Fecha inválida para formatear hora:', originalStr);
         return '';
       }
-      
-      // Debug: verificar la conversión
-      const utcHours = localDate.getUTCHours();
-      const localHours = localDate.getHours();
-      const offset = localHours - utcHours;
-      
-      if (offset !== 0) {
-        console.log(`🕐 UTC: ${originalStr} → Local: ${format(localDate, "HH:mm", { locale: es })} (offset: ${offset}h)`);
-      }
-      
-      // format de date-fns usa la zona horaria local del objeto Date
-      // Como el Date ya está en hora local (convertido automáticamente desde UTC),
-      // format mostrará la hora local correcta
       return format(localDate, "HH:mm", { locale: es });
     } catch (error) {
-      console.error('Error formateando hora:', error, dateString);
       return '';
     }
   };
 
   const getSpeedColor = (speed: number): string => {
-    if (speed >= 100) return '#10b981'; // green-500
-    if (speed >= 50) return '#3b82f6'; // blue-500
-    if (speed >= 25) return '#f59e0b'; // amber-500
-    return '#ef4444'; // red-500
+    if (speed >= 100) return theme.success;
+    if (speed >= 50) return '#3b82f6';
+    if (speed >= 25) return theme.warning;
+    return theme.error;
   };
 
   const getPingColor = (ping: number): string => {
-    if (ping < 20) return '#10b981';
+    if (ping < 20) return theme.success;
     if (ping < 50) return '#3b82f6';
-    if (ping < 100) return '#f59e0b';
-    return '#ef4444';
+    if (ping < 100) return theme.warning;
+    return theme.error;
   };
 
-  const getSpeedPercentage = (speed: number, maxSpeed: number = 200): number => {
-    return Math.min((speed / maxSpeed) * 100, 100);
+  // Skeleton Components
+  const SkeletonCard = () => (
+    <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+      <View style={[styles.skeletonLine, { backgroundColor: theme.skeleton }]} />
+      <View style={[styles.skeletonLine, { backgroundColor: theme.skeleton, width: '60%', marginTop: 12 }]} />
+      <View style={[styles.skeletonLine, { backgroundColor: theme.skeleton, width: '40%', marginTop: 8 }]} />
+    </View>
+  );
+
+  const SkeletonMetric = () => (
+    <View style={[styles.metricCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+      <View style={[styles.skeletonCircle, { backgroundColor: theme.skeleton }]} />
+      <View style={[styles.skeletonLine, { backgroundColor: theme.skeleton, width: '70%', marginTop: 12 }]} />
+      <View style={[styles.skeletonLine, { backgroundColor: theme.skeleton, width: '50%', marginTop: 8 }]} />
+    </View>
+  );
+
+  // History Item with Gesture Animation
+  const HistoryItem = ({ result, index }: { result: SpeedtestResult; index: number }) => {
+    const scale = useSharedValue(1);
+    const opacity = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.value }],
+      opacity: opacity.value,
+    }));
+
+    const handlePressIn = () => {
+      scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+      opacity.value = withTiming(0.8, { duration: 100 });
+      if (Platform.OS === 'ios') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    };
+
+    const handlePressOut = () => {
+      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+      opacity.value = withTiming(1, { duration: 100 });
+    };
+
+    const gesture = Gesture.Tap()
+      .onBegin(() => {
+        runOnJS(handlePressIn)();
+      })
+      .onFinalize(() => {
+        runOnJS(handlePressOut)();
+      });
+
+    return (
+      <GestureDetector gesture={gesture}>
+        <Animated.View
+          style={[
+            styles.historyItem,
+            { backgroundColor: theme.card, shadowColor: theme.shadow },
+            animatedStyle,
+          ]}
+        >
+          <View style={styles.historyItemHeader}>
+            <View>
+              <Text style={[styles.historyDate, { color: theme.text }]}>
+                {formatDate(result.timestamp)}
+              </Text>
+              <Text style={[styles.historyTime, { color: theme.textSecondary }]}>
+                {formatTime(result.timestamp)}
+              </Text>
+            </View>
+            {result.server && (
+              <View style={[styles.serverBadge, { backgroundColor: theme.background }]}>
+                <Ionicons name="server" size={12} color={theme.textSecondary} />
+                <Text style={[styles.serverBadgeText, { color: theme.textSecondary }]}>
+                  {result.server}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.historyMetrics}>
+            <View style={styles.historyMetric}>
+              <Ionicons name="download" size={16} color={getSpeedColor(result.downloadSpeed)} />
+              <Text style={[styles.historyMetricValue, { color: theme.text }]}>
+                {formatSpeed(result.downloadSpeed)}
+              </Text>
+              <Text style={[styles.historyMetricUnit, { color: theme.textSecondary }]}>
+                {formatSpeedUnit(result.downloadSpeed)}
+              </Text>
+            </View>
+
+            <View style={styles.historyMetric}>
+              <Ionicons name="arrow-up" size={16} color={getSpeedColor(result.uploadSpeed)} />
+              <Text style={[styles.historyMetricValue, { color: theme.text }]}>
+                {formatSpeed(result.uploadSpeed)}
+              </Text>
+              <Text style={[styles.historyMetricUnit, { color: theme.textSecondary }]}>
+                {formatSpeedUnit(result.uploadSpeed)}
+              </Text>
+            </View>
+
+            <View style={styles.historyMetric}>
+              <Ionicons name="pulse" size={16} color={getPingColor(result.ping)} />
+              <Text style={[styles.historyMetricValue, { color: theme.text }]}>
+                {formatPing(result.ping)}
+              </Text>
+              <Text style={[styles.historyMetricUnit, { color: theme.textSecondary }]}>ms</Text>
+            </View>
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    );
   };
 
-  const SpeedMetricCard = ({
+  // Pagination Button with Animation
+  const PaginationButton = ({
     icon,
-    label,
-    value,
-    unit,
-    color,
-    percentage,
+    onPress,
+    disabled,
   }: {
     icon: string;
-    label: string;
-    value: string;
-    unit: string;
-    color: string;
-    percentage: number;
-  }) => (
-    <View style={[styles.speedMetricCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <View style={styles.speedMetricHeader}>
-        <View style={[styles.iconContainer, { backgroundColor: `${color}15` }]}>
-          <Ionicons name={icon as any} size={28} color={color} />
-        </View>
-        <Text style={[styles.speedMetricLabel, { color: theme.textSecondary }]}>{label}</Text>
-      </View>
-      <View style={styles.speedValueContainer}>
-        <Text style={[styles.speedValue, { color: color }]}>{value}</Text>
-        <Text style={[styles.speedUnit, { color: theme.textSecondary }]}>{unit}</Text>
-      </View>
-      <View style={[styles.progressBarContainer, { backgroundColor: `${color}10` }]}>
-        <View
-          style={[
-            styles.progressBar,
-            {
-              width: `${percentage}%`,
-              backgroundColor: color,
-            },
-          ]}
-        />
-      </View>
-    </View>
-  );
+    onPress: () => void;
+    disabled: boolean;
+  }) => {
+    const scale = useSharedValue(1);
 
-  const PingMetricCard = ({
-    value,
-    color,
-  }: {
-    value: string;
-    color: string;
-  }) => (
-    <View style={[styles.pingMetricCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <View style={[styles.pingIconContainer, { backgroundColor: `${color}15` }]}>
-        <Ionicons name="pulse" size={32} color={color} />
-      </View>
-      <Text style={[styles.pingLabel, { color: theme.textSecondary }]}>Latencia</Text>
-      <View style={styles.pingValueContainer}>
-        <Text style={[styles.pingValue, { color: color }]}>{value}</Text>
-        <Text style={[styles.pingUnit, { color: theme.textSecondary }]}>ms</Text>
-      </View>
-    </View>
-  );
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.value }],
+      opacity: disabled ? 0.5 : 1,
+    }));
+
+    const gesture = Gesture.Tap()
+      .enabled(!disabled)
+      .onBegin(() => {
+        if (!disabled) {
+          scale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
+          if (Platform.OS === 'ios') {
+            runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+          }
+        }
+      })
+      .onFinalize(() => {
+        if (!disabled) {
+          scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+          runOnJS(onPress)();
+        }
+      });
+
+    return (
+      <GestureDetector gesture={gesture}>
+        <Animated.View
+          style={[
+            styles.paginationButton,
+            { backgroundColor: theme.card, borderColor: theme.border },
+            animatedStyle,
+          ]}
+        >
+          <Ionicons
+            name={icon as any}
+            size={20}
+            color={disabled ? theme.textSecondary : '#3b82f6'}
+          />
+        </Animated.View>
+      </GestureDetector>
+    );
+  };
 
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-            Cargando estadísticas...
-          </Text>
-        </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <View style={[styles.skeletonLine, { backgroundColor: theme.skeleton, width: 150, height: 32 }]} />
+            </View>
+          </View>
+
+          <View style={styles.metricsRow}>
+            <SkeletonMetric />
+            <SkeletonMetric />
+          </View>
+
+          <SkeletonCard />
+          <SkeletonCard />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -273,126 +349,141 @@ export const SpeedtestScreen: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
-        }
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colorScheme === 'dark' ? '#ffffff' : '#3b82f6'}
+            colors={['#3b82f6']}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={[styles.headerIconContainer, { backgroundColor: '#3b82f620' }]}>
-            <Ionicons name="speedometer" size={40} color="#3b82f6" />
+          <View style={styles.headerContent}>
+            <Text style={[styles.title, { color: theme.text }]}>Speedtest</Text>
           </View>
-          <Text style={[styles.title, { color: theme.text }]}>Speedtest</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Estadísticas de velocidad del servidor
-          </Text>
         </View>
 
-        {/* Latest Test - Main Metrics */}
+        {/* Latest Test Metrics */}
         {summary?.latest && (
           <>
-            <View style={styles.latestTestHeader}>
-              <View>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>Última Prueba</Text>
-                {summary.latest.timestamp && (
-                  <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
-                    {formatDate(summary.latest.timestamp)} • {formatTime(summary.latest.timestamp)}
-                  </Text>
-                )}
+            <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="flash" size={24} color="#3b82f6" />
+                <View style={styles.cardHeaderText}>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>Última Prueba</Text>
+                  {summary.latest.timestamp && (
+                    <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
+                      {formatDate(summary.latest.timestamp)} • {formatTime(summary.latest.timestamp)}
+                    </Text>
+                  )}
+                </View>
               </View>
-              {summary.latest.server && (
-                <View style={[styles.serverBadge, { backgroundColor: '#3b82f615' }]}>
-                  <Ionicons name="server" size={14} color="#3b82f6" />
-                  <Text style={[styles.serverBadgeText, { color: '#3b82f6' }]}>
-                    {summary.latest.server}
+
+              <View style={styles.metricsRow}>
+                <View style={[styles.metricCard, { backgroundColor: theme.background }]}>
+                  <Ionicons
+                    name="download"
+                    size={24}
+                    color={getSpeedColor(summary.latest.downloadSpeed)}
+                  />
+                  <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Descarga</Text>
+                  <Text
+                    style={[
+                      styles.metricValue,
+                      { color: getSpeedColor(summary.latest.downloadSpeed) },
+                    ]}
+                  >
+                    {formatSpeed(summary.latest.downloadSpeed)}
+                  </Text>
+                  <Text style={[styles.metricUnit, { color: theme.textSecondary }]}>
+                    {formatSpeedUnit(summary.latest.downloadSpeed)}
                   </Text>
                 </View>
-              )}
+
+                <View style={[styles.metricCard, { backgroundColor: theme.background }]}>
+                  <Ionicons
+                    name="arrow-up"
+                    size={24}
+                    color={getSpeedColor(summary.latest.uploadSpeed)}
+                  />
+                  <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Subida</Text>
+                  <Text
+                    style={[
+                      styles.metricValue,
+                      { color: getSpeedColor(summary.latest.uploadSpeed) },
+                    ]}
+                  >
+                    {formatSpeed(summary.latest.uploadSpeed)}
+                  </Text>
+                  <Text style={[styles.metricUnit, { color: theme.textSecondary }]}>
+                    {formatSpeedUnit(summary.latest.uploadSpeed)}
+                  </Text>
+                </View>
+
+                <View style={[styles.metricCard, { backgroundColor: theme.background }]}>
+                  <Ionicons name="pulse" size={24} color={getPingColor(summary.latest.ping)} />
+                  <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Ping</Text>
+                  <Text style={[styles.metricValue, { color: getPingColor(summary.latest.ping) }]}>
+                    {formatPing(summary.latest.ping)}
+                  </Text>
+                  <Text style={[styles.metricUnit, { color: theme.textSecondary }]}>ms</Text>
+                </View>
+              </View>
             </View>
 
-            <View style={styles.mainMetricsContainer}>
-              <SpeedMetricCard
-                icon="download"
-                label="Descarga"
-                value={formatSpeed(summary.latest.downloadSpeed)}
-                unit={formatSpeedUnit(summary.latest.downloadSpeed)}
-                color={getSpeedColor(summary.latest.downloadSpeed)}
-                percentage={getSpeedPercentage(summary.latest.downloadSpeed, maxSpeed)}
-              />
-              <SpeedMetricCard
-                icon="arrow-up"
-                label="Subida"
-                value={formatSpeed(summary.latest.uploadSpeed)}
-                unit={formatSpeedUnit(summary.latest.uploadSpeed)}
-                color={getSpeedColor(summary.latest.uploadSpeed)}
-                percentage={getSpeedPercentage(summary.latest.uploadSpeed, maxSpeed)}
-              />
-            </View>
+            {/* Average Stats */}
+            {summary?.average && (
+              <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="stats-chart" size={24} color="#3b82f6" />
+                  <View style={styles.cardHeaderText}>
+                    <Text style={[styles.cardTitle, { color: theme.text }]}>Promedio</Text>
+                    {summary.totalTests && (
+                      <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
+                        {summary.totalTests} prueba{summary.totalTests !== 1 ? 's' : ''} realizadas
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.averageMetrics}>
+                  <View style={styles.averageMetric}>
+                    <Text style={[styles.averageMetricLabel, { color: theme.textSecondary }]}>
+                      Descarga
+                    </Text>
+                    <Text style={[styles.averageMetricValue, { color: theme.text }]}>
+                      {formatSpeed(summary.average.downloadSpeed)} {formatSpeedUnit(summary.average.downloadSpeed)}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.averageMetricDivider, { backgroundColor: theme.border }]} />
+
+                  <View style={styles.averageMetric}>
+                    <Text style={[styles.averageMetricLabel, { color: theme.textSecondary }]}>Subida</Text>
+                    <Text style={[styles.averageMetricValue, { color: theme.text }]}>
+                      {formatSpeed(summary.average.uploadSpeed)} {formatSpeedUnit(summary.average.uploadSpeed)}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.averageMetricDivider, { backgroundColor: theme.border }]} />
+
+                  <View style={styles.averageMetric}>
+                    <Text style={[styles.averageMetricLabel, { color: theme.textSecondary }]}>Ping</Text>
+                    <Text style={[styles.averageMetricValue, { color: theme.text }]}>
+                      {formatPing(summary.average.ping)} ms
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </>
         )}
 
-        {/* Average Stats */}
-        {summary?.average && (
-          <View style={[styles.averageCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <View style={styles.averageHeader}>
-              <View style={[styles.averageIconContainer, { backgroundColor: '#3b82f615' }]}>
-                <Ionicons name="stats-chart" size={24} color="#3b82f6" />
-              </View>
-              <View style={styles.averageHeaderText}>
-                <Text style={[styles.averageTitle, { color: theme.text }]}>Promedio</Text>
-                {summary.totalTests && (
-                  <Text style={[styles.averageSubtitle, { color: theme.textSecondary }]}>
-                    {summary.totalTests} prueba{summary.totalTests !== 1 ? 's' : ''} realizadas
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.averageMetrics}>
-              <View style={styles.averageMetric}>
-                <View style={styles.averageMetricHeader}>
-                  <Ionicons name="download" size={18} color="#3b82f6" />
-                  <Text style={[styles.averageMetricLabel, { color: theme.textSecondary }]}>
-                    Descarga
-                  </Text>
-                </View>
-                <Text style={[styles.averageMetricValue, { color: theme.text }]}>
-                  {formatSpeed(summary.average.downloadSpeed)} {formatSpeedUnit(summary.average.downloadSpeed)}
-                </Text>
-              </View>
-
-              <View style={[styles.averageMetricDivider, { backgroundColor: theme.border }]} />
-
-              <View style={styles.averageMetric}>
-                <View style={styles.averageMetricHeader}>
-                  <Ionicons name="arrow-up" size={18} color="#3b82f6" />
-                  <Text style={[styles.averageMetricLabel, { color: theme.textSecondary }]}>
-                    Subida
-                  </Text>
-                </View>
-                <Text style={[styles.averageMetricValue, { color: theme.text }]}>
-                  {formatSpeed(summary.average.uploadSpeed)} {formatSpeedUnit(summary.average.uploadSpeed)}
-                </Text>
-              </View>
-
-              <View style={[styles.averageMetricDivider, { backgroundColor: theme.border }]} />
-
-              <View style={styles.averageMetric}>
-                <View style={styles.averageMetricHeader}>
-                  <Ionicons name="pulse" size={18} color="#3b82f6" />
-                  <Text style={[styles.averageMetricLabel, { color: theme.textSecondary }]}>Ping</Text>
-                </View>
-                <Text style={[styles.averageMetricValue, { color: theme.text }]}>
-                  {formatPing(summary.average.ping)} ms
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
         {/* History */}
-        {history && history.results.length > 0 && (
+        {history && (
           <View style={styles.historySection}>
             <View style={styles.historyHeader}>
               <Ionicons name="time" size={20} color="#3b82f6" />
@@ -403,118 +494,42 @@ export const SpeedtestScreen: React.FC = () => {
               <View style={styles.historyLoading}>
                 <ActivityIndicator size="small" color="#3b82f6" />
               </View>
-            ) : (
+            ) : history.results.length > 0 ? (
               <>
-                {history.results.map((result: SpeedtestResult, index: number) => (
-              <View
-                key={result.id ? `speedtest-${result.id}` : `speedtest-${result.timestamp}-${index}`}
-                style={[
-                  styles.historyItem,
-                  { backgroundColor: theme.card, borderColor: theme.border },
-                ]}
-              >
-                <View style={styles.historyItemHeader}>
-                  <View>
-                    <Text style={[styles.historyDate, { color: theme.text }]}>
-                      {formatDate(result.timestamp)}
-                    </Text>
-                    <Text style={[styles.historyTime, { color: theme.textSecondary }]}>
-                      {formatTime(result.timestamp)}
-                    </Text>
-                  </View>
-                  {result.server && (
-                    <View style={[styles.historyServerBadge, { backgroundColor: theme.background }]}>
-                      <Ionicons name="server" size={12} color={theme.textSecondary} />
-                      <Text style={[styles.historyServerText, { color: theme.textSecondary }]}>
-                        {result.server}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.historyMetrics}>
-                  <View style={styles.historyMetric}>
-                    <Ionicons
-                      name="download"
-                      size={16}
-                      color={getSpeedColor(result.downloadSpeed)}
-                    />
-                    <Text style={[styles.historyMetricValue, { color: theme.text }]}>
-                      {formatSpeed(result.downloadSpeed)}
-                    </Text>
-                    <Text style={[styles.historyMetricUnit, { color: theme.textSecondary }]}>
-                      {formatSpeedUnit(result.downloadSpeed)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.historyMetric}>
-                    <Ionicons name="arrow-up" size={16} color={getSpeedColor(result.uploadSpeed)} />
-                    <Text style={[styles.historyMetricValue, { color: theme.text }]}>
-                      {formatSpeed(result.uploadSpeed)}
-                    </Text>
-                    <Text style={[styles.historyMetricUnit, { color: theme.textSecondary }]}>
-                      {formatSpeedUnit(result.uploadSpeed)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.historyMetric}>
-                    <Ionicons name="pulse" size={16} color={getPingColor(result.ping)} />
-                    <Text style={[styles.historyMetricValue, { color: theme.text }]}>
-                      {formatPing(result.ping)}
-                    </Text>
-                    <Text style={[styles.historyMetricUnit, { color: theme.textSecondary }]}>ms</Text>
-                  </View>
-                </View>
-              </View>
+                {history.results.map((result, index) => (
+                  <HistoryItem key={result.id || `speedtest-${result.timestamp}-${index}`} result={result} index={index} />
                 ))}
 
-                {/* Pagination Controls */}
+                {/* Pagination */}
                 {history.pagination.totalPages > 1 && (
                   <View style={styles.paginationContainer}>
-                    <View style={styles.paginationInfo}>
-                      <Text style={[styles.paginationText, { color: theme.textSecondary }]}>
-                        Página {history.pagination.page} de {history.pagination.totalPages}
-                      </Text>
-                    </View>
+                    <Text style={[styles.paginationText, { color: theme.textSecondary }]}>
+                      Página {history.pagination.page} de {history.pagination.totalPages}
+                    </Text>
                     <View style={styles.paginationButtons}>
-                      <TouchableOpacity
-                        style={[
-                          styles.paginationButton,
-                          { backgroundColor: theme.card, borderColor: theme.border },
-                          currentPage === 1 && styles.paginationButtonDisabled,
-                        ]}
+                      <PaginationButton
+                        icon="chevron-back"
                         onPress={() => currentPage > 1 && loadHistory(currentPage - 1)}
                         disabled={currentPage === 1 || loadingHistory}
-                      >
-                        <Ionicons
-                          name="chevron-back"
-                          size={20}
-                          color={currentPage === 1 ? theme.textSecondary : '#3b82f6'}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.paginationButton,
-                          { backgroundColor: theme.card, borderColor: theme.border },
-                          currentPage === history.pagination.totalPages && styles.paginationButtonDisabled,
-                        ]}
+                      />
+                      <PaginationButton
+                        icon="chevron-forward"
                         onPress={() =>
                           currentPage < history.pagination.totalPages && loadHistory(currentPage + 1)
                         }
                         disabled={currentPage === history.pagination.totalPages || loadingHistory}
-                      >
-                        <Ionicons
-                          name="chevron-forward"
-                          size={20}
-                          color={
-                            currentPage === history.pagination.totalPages ? theme.textSecondary : '#3b82f6'
-                          }
-                        />
-                      </TouchableOpacity>
+                      />
                     </View>
                   </View>
                 )}
               </>
+            ) : (
+              <View style={[styles.emptyState, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <Ionicons name="speedometer-outline" size={48} color={theme.textSecondary} />
+                <Text style={[styles.emptyStateText, { color: theme.text }]}>
+                  No hay historial disponible
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -522,9 +537,7 @@ export const SpeedtestScreen: React.FC = () => {
         {/* Empty State */}
         {!summary?.latest && !summary?.average && (!history || history.results.length === 0) && (
           <View style={[styles.emptyState, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <View style={[styles.emptyIconContainer, { backgroundColor: '#3b82f610' }]}>
-              <Ionicons name="speedometer-outline" size={48} color="#3b82f6" />
-            </View>
+            <Ionicons name="speedometer-outline" size={64} color={theme.textSecondary} />
             <Text style={[styles.emptyStateText, { color: theme.text }]}>
               No hay estadísticas disponibles
             </Text>
@@ -542,219 +555,79 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 16,
-    fontWeight: '500',
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    marginBottom: 8,
   },
-  headerIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    marginTop: 6,
-    textAlign: 'center',
-    fontWeight: '400',
-  },
-  latestTestHeader: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    letterSpacing: -0.5,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+  cardHeaderText: {
+    marginLeft: 12,
+    flex: 1,
   },
-  sectionSubtitle: {
-    fontSize: 13,
-    marginTop: 4,
-    fontWeight: '400',
-  },
-  serverBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  serverBadgeText: {
-    fontSize: 12,
+  cardTitle: {
+    fontSize: 18,
     fontWeight: '600',
   },
-  mainMetricsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  speedMetricCard: {
-    flex: 1,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  speedMetricHeader: {
-    marginBottom: 16,
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  speedMetricLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  speedValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 16,
-  },
-  speedValue: {
-    fontSize: 36,
-    fontWeight: '700',
-    letterSpacing: -1,
-  },
-  speedUnit: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 6,
-    marginBottom: 4,
-  },
-  progressBarContainer: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  pingMetricCard: {
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  pingIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  pingLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  pingValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  pingValue: {
-    fontSize: 42,
-    fontWeight: '700',
-    letterSpacing: -1,
-  },
-  pingUnit: {
-    fontSize: 18,
-    fontWeight: '500',
-    marginLeft: 6,
-    marginBottom: 4,
-  },
-  averageCard: {
-    borderRadius: 20,
-    padding: 24,
-    marginTop: 24,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  averageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  averageIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  averageHeaderText: {
-    flex: 1,
-  },
-  averageTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  averageSubtitle: {
+  cardSubtitle: {
     fontSize: 13,
     marginTop: 2,
-    fontWeight: '400',
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  metricUnit: {
+    fontSize: 12,
+    marginTop: 2,
   },
   averageMetrics: {
     flexDirection: 'row',
@@ -764,26 +637,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  averageMetricHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 6,
-  },
   averageMetricLabel: {
     fontSize: 12,
+    marginBottom: 8,
     fontWeight: '500',
   },
   averageMetricValue: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
   },
   averageMetricDivider: {
     width: 1,
     marginHorizontal: 8,
   },
   historySection: {
-    marginTop: 32,
+    marginTop: 8,
+    paddingHorizontal: 16,
   },
   historyHeader: {
     flexDirection: 'row',
@@ -792,15 +661,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   historyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    fontSize: 18,
+    fontWeight: '600',
   },
   historyItem: {
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   historyItemHeader: {
     flexDirection: 'row',
@@ -809,14 +680,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   historyDate: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
   historyTime: {
     fontSize: 12,
     marginTop: 2,
   },
-  historyServerBadge: {
+  serverBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
@@ -824,7 +695,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 4,
   },
-  historyServerText: {
+  serverBadgeText: {
     fontSize: 10,
     fontWeight: '500',
   },
@@ -838,43 +709,15 @@ const styles = StyleSheet.create({
   historyMetric: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   historyMetricValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
   historyMetricUnit: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
-  },
-  emptyState: {
-    borderRadius: 20,
-    padding: 48,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    marginTop: 32,
-  },
-  emptyIconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  emptyStateText: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 20,
   },
   historyLoading: {
     padding: 20,
@@ -888,9 +731,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.05)',
-  },
-  paginationInfo: {
-    flex: 1,
   },
   paginationText: {
     fontSize: 13,
@@ -908,7 +748,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  paginationButtonDisabled: {
-    opacity: 0.5,
+  emptyState: {
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    marginTop: 24,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // Skeleton styles
+  skeletonLine: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#f3f4f6',
+  },
+  skeletonCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f3f4f6',
   },
 });

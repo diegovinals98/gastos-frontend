@@ -183,6 +183,34 @@ export const unregisterPushToken = async (token: string): Promise<UnregisterToke
   }
 };
 
+export interface TestNotificationResponse {
+  success: boolean;
+  message: string;
+  tickets?: any[];
+}
+
+export const testNotification = async (): Promise<TestNotificationResponse> => {
+  try {
+    const response = await authenticatedFetch('/notifications/test', {
+      method: 'POST',
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ 
+        message: response.statusText,
+        success: false
+      }));
+      throw new Error(error.message || `Error testing notification: ${response.statusText}`);
+    }
+    
+    const data: TestNotificationResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error('❌ Error probando notificación:', error);
+    throw error;
+  }
+};
+
 export const getFactorialCookie = async (): Promise<string | null> => {
   try {
     const response = await authenticatedFetch('/config/factorial-cookie');

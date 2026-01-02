@@ -6,7 +6,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   useColorScheme,
   View,
   ActivityIndicator,
@@ -17,9 +16,10 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { saveFactorialCookie, getFactorialCookie, getCardId, saveCardId, testCookie, TestCookieResponse, getPushTokens, registerPushToken, unregisterPushToken } from '../services/api';
+import { saveFactorialCookie, getFactorialCookie, getCardId, saveCardId, testCookie, TestCookieResponse, getPushTokens, registerPushToken, unregisterPushToken, testNotification } from '../services/api';
 import { useTheme } from '../config/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { Toast } from '../components/Toast';
 
 export const SettingsScreen: React.FC = () => {
   const [cookieValue, setCookieValue] = useState('');
@@ -31,6 +31,10 @@ export const SettingsScreen: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
   const [togglingNotifications, setTogglingNotifications] = useState(false);
+  const [testingNotification, setTestingNotification] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('error');
   const [cardId, setCardId] = useState('');
   const [currentCardId, setCurrentCardId] = useState<string | null>(null);
   const [loadingCardId, setLoadingCardId] = useState(true);
@@ -105,7 +109,7 @@ export const SettingsScreen: React.FC = () => {
 
   const handleSaveCookie = async () => {
     if (!cookieValue.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un valor para el cookie');
+      showToast('Por favor ingresa un valor para el cookie', 'error');
       return;
     }
 
@@ -113,7 +117,7 @@ export const SettingsScreen: React.FC = () => {
     try {
       await saveFactorialCookie(cookieValue.trim());
       setCurrentCookie(cookieValue.trim());
-      Alert.alert('Éxito', 'Cookie guardado correctamente');
+      showToast('Cookie guardado correctamente', 'success');
     } catch (error: any) {
       console.error('Error guardando cookie:', error);
       // Si no hay token, verificar estado de autenticación para redirigir a login
@@ -121,7 +125,7 @@ export const SettingsScreen: React.FC = () => {
         await checkAuthStatus();
         return;
       }
-      Alert.alert('Error', 'No se pudo guardar el cookie. Verifica que el servidor esté corriendo.');
+      showToast('No se pudo guardar el cookie. Verifica que el servidor esté corriendo.', 'error');
     } finally {
       setSavingCookie(false);
     }
@@ -133,17 +137,9 @@ export const SettingsScreen: React.FC = () => {
       const result: TestCookieResponse = await testCookie();
       
       if (result.success) {
-        Alert.alert(
-          '✅ Cookie Válida',
-          result.message || 'Cookie válida - Conexión con Factorial funcionando correctamente',
-          [{ text: 'OK' }]
-        );
+        showToast(result.message || 'Cookie válida - Conexión con Factorial funcionando correctamente', 'success');
       } else {
-        Alert.alert(
-          '❌ Cookie Inválida',
-          result.message || result.error || 'Cookie caducada o inválida',
-          [{ text: 'OK' }]
-        );
+        showToast(result.message || result.error || 'Cookie caducada o inválida', 'error');
       }
     } catch (error: any) {
       console.error('Error probando cookie:', error);
@@ -152,10 +148,7 @@ export const SettingsScreen: React.FC = () => {
         await checkAuthStatus();
         return;
       }
-      Alert.alert(
-        'Error',
-        error.message || 'No se pudo probar el cookie. Verifica que el servidor esté corriendo.'
-      );
+      showToast(error.message || 'No se pudo probar el cookie. Verifica que el servidor esté corriendo.', 'error');
     } finally {
       setTestingCookie(false);
     }
@@ -186,7 +179,7 @@ export const SettingsScreen: React.FC = () => {
       if (status !== 'granted') {
         const { status: newStatus } = await Notifications.requestPermissionsAsync();
         if (newStatus !== 'granted') {
-          Alert.alert('Permisos', 'Se necesitan permisos para notificaciones');
+          showToast('Se necesitan permisos para notificaciones', 'error');
           return null;
         }
       }
@@ -210,7 +203,7 @@ export const SettingsScreen: React.FC = () => {
       const expoToken = await getExpoPushToken();
       
       if (!expoToken) {
-        Alert.alert('Error', 'No se pudo obtener el token de notificaciones');
+        showToast('No se pudo obtener el token de notificaciones', 'error');
         setTogglingNotifications(false);
         return;
       }
@@ -221,7 +214,7 @@ export const SettingsScreen: React.FC = () => {
         if (result.success) {
           setNotificationsEnabled(true);
         } else {
-          Alert.alert('Error', result.message || 'No se pudo activar las notificaciones');
+          showToast(result.message || 'No se pudo activar las notificaciones', 'error');
         }
       } else {
         // Desactivar notificaciones - desregistrar token
@@ -229,7 +222,7 @@ export const SettingsScreen: React.FC = () => {
         if (result.success) {
           setNotificationsEnabled(false);
         } else {
-          Alert.alert('Error', result.message || 'No se pudo desactivar las notificaciones');
+          showToast(result.message || 'No se pudo desactivar las notificaciones', 'error');
         }
       }
     } catch (error: any) {
@@ -238,16 +231,48 @@ export const SettingsScreen: React.FC = () => {
       if (error?.message?.includes('No hay token de autenticación') || error?.message?.includes('Sesión expirada')) {
         await checkAuthStatus();
       } else {
-        Alert.alert('Error', error.message || 'No se pudo cambiar el estado de las notificaciones');
+        showToast(error.message || 'No se pudo cambiar el estado de las notificaciones', 'error');
       }
     } finally {
       setTogglingNotifications(false);
     }
   };
 
+  const showToast = (message: string, type: 'success' | 'error' = 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
+  const handleTestNotification = async () => {
+    setTestingNotification(true);
+    try {
+      const result = await testNotification();
+      
+      if (result.success) {
+        // Mostrar toast de éxito
+        showToast(result.message || 'Notificación de prueba enviada correctamente', 'success');
+      } else {
+        // Mostrar toast con el mensaje de error
+        showToast(result.message || 'No se pudo enviar la notificación de prueba', 'error');
+      }
+    } catch (error: any) {
+      console.error('Error probando notificación:', error);
+      // Si no hay token, verificar estado de autenticación para redirigir a login
+      if (error?.message?.includes('No hay token de autenticación') || error?.message?.includes('Sesión expirada')) {
+        await checkAuthStatus();
+        return;
+      }
+      // Mostrar toast con el mensaje de error
+      showToast(error.message || 'No se pudo enviar la notificación de prueba. Verifica que el servidor esté corriendo.');
+    } finally {
+      setTestingNotification(false);
+    }
+  };
+
   const handleSaveCardId = async () => {
     if (!cardId.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un número de tarjeta');
+      showToast('Por favor ingresa un número de tarjeta', 'error');
       return;
     }
 
@@ -255,7 +280,7 @@ export const SettingsScreen: React.FC = () => {
     try {
       await saveCardId(cardId.trim());
       setCurrentCardId(cardId.trim());
-      Alert.alert('Éxito', 'Número de tarjeta guardado correctamente');
+      showToast('Número de tarjeta guardado correctamente', 'success');
     } catch (error: any) {
       console.error('Error guardando número de tarjeta:', error);
       // Si no hay token, verificar estado de autenticación para redirigir a login
@@ -263,7 +288,7 @@ export const SettingsScreen: React.FC = () => {
         await checkAuthStatus();
         return;
       }
-      Alert.alert('Error', 'No se pudo guardar el número de tarjeta. Verifica que el servidor esté corriendo.');
+      showToast('No se pudo guardar el número de tarjeta. Verifica que el servidor esté corriendo.', 'error');
     } finally {
       setSavingCardId(false);
     }
@@ -275,7 +300,7 @@ export const SettingsScreen: React.FC = () => {
       await logout();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
-      Alert.alert('Error', 'No se pudo cerrar sesión correctamente');
+      showToast('No se pudo cerrar sesión correctamente', 'error');
     } finally {
       setLoggingOut(false);
     }
@@ -284,6 +309,13 @@ export const SettingsScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+        duration={3000}
+        type={toastType}
+      />
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -529,36 +561,59 @@ export const SettingsScreen: React.FC = () => {
               </Text>
             </View>
           ) : (
-            <View style={styles.toggleContainer}>
-              <View style={styles.toggleRow}>
-                <View style={styles.toggleInfo}>
-                  <Text style={[styles.toggleLabel, { color: theme.text }]}>
-                    Notificaciones Push
-                  </Text>
-                  <Text style={[styles.toggleDescription, { color: theme.textSecondary }]}>
-                    {notificationsEnabled 
-                      ? 'Recibirás notificaciones sobre tus gastos' 
-                      : 'No recibirás notificaciones push'}
-                  </Text>
+            <>
+              <View style={styles.toggleContainer}>
+                <View style={styles.toggleRow}>
+                  <View style={styles.toggleInfo}>
+                    <Text style={[styles.toggleLabel, { color: theme.text }]}>
+                      Notificaciones Push
+                    </Text>
+                    <Text style={[styles.toggleDescription, { color: theme.textSecondary }]}>
+                      {notificationsEnabled 
+                        ? 'Recibirás notificaciones sobre tus gastos' 
+                        : 'No recibirás notificaciones push'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={notificationsEnabled}
+                    onValueChange={handleToggleNotifications}
+                    disabled={togglingNotifications}
+                    trackColor={{ false: theme.border, true: '#3b82f6' }}
+                    thumbColor={notificationsEnabled ? '#ffffff' : theme.textSecondary}
+                    ios_backgroundColor={theme.border}
+                  />
                 </View>
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={handleToggleNotifications}
-                  disabled={togglingNotifications}
-                  trackColor={{ false: theme.border, true: '#3b82f6' }}
-                  thumbColor={notificationsEnabled ? '#ffffff' : theme.textSecondary}
-                  ios_backgroundColor={theme.border}
-                />
+                {togglingNotifications && (
+                  <View style={styles.toggleLoading}>
+                    <ActivityIndicator color={theme.textSecondary} size="small" />
+                    <Text style={[styles.toggleLoadingText, { color: theme.textSecondary }]}>
+                      {notificationsEnabled ? 'Desactivando...' : 'Activando...'}
+                    </Text>
+                  </View>
+                )}
               </View>
-              {togglingNotifications && (
-                <View style={styles.toggleLoading}>
-                  <ActivityIndicator color={theme.textSecondary} size="small" />
-                  <Text style={[styles.toggleLoadingText, { color: theme.textSecondary }]}>
-                    {notificationsEnabled ? 'Desactivando...' : 'Activando...'}
-                  </Text>
-                </View>
-              )}
-            </View>
+              <TouchableOpacity
+                style={[
+                  styles.secondaryButton,
+                  { backgroundColor: theme.button, borderColor: theme.border, marginTop: 16, flexDirection: 'row' },
+                  testingNotification && styles.buttonDisabled
+                ]}
+                onPress={handleTestNotification}
+                disabled={testingNotification}
+                activeOpacity={0.7}
+              >
+                {testingNotification ? (
+                  <ActivityIndicator color={theme.text} size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="notifications-outline" size={18} color={theme.text} style={{ marginRight: 8 }} />
+                    <Text style={[styles.secondaryButtonText, { color: theme.text, marginBottom: 0 }]}>
+                      Test Notification
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
           )}
         </View>
 

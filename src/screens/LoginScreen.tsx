@@ -6,7 +6,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   useColorScheme,
   KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../config/theme';
+import { Toast } from '../components/Toast';
 
 interface LoginScreenProps {
   navigation: any;
@@ -26,6 +26,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('error');
   const { login } = useAuth();
   const colorScheme = useColorScheme();
   const theme = useTheme();
@@ -35,14 +38,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     return emailRegex.test(email);
   };
 
+  const showToast = (message: string, type: 'success' | 'error' = 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      showToast('Por favor completa todos los campos', 'error');
       return;
     }
 
     if (!validateEmail(email)) {
-      Alert.alert('Error', 'Por favor ingresa un email válido');
+      showToast('Por favor ingresa un email válido', 'error');
       return;
     }
 
@@ -51,7 +60,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       await login({ email: email.trim(), password });
       // Navigation will be handled by App.tsx based on auth state
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al iniciar sesión');
+      showToast(error.message || 'Error al iniciar sesión', 'error');
     } finally {
       setLoading(false);
     }
@@ -60,6 +69,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+        duration={3000}
+        type={toastType}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}

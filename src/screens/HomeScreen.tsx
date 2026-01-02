@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   SafeAreaView,
-  Alert,
   AppState,
   AppStateStatus,
   useColorScheme,
@@ -23,6 +22,7 @@ import Animated, {
 import { BalanceCard } from '../components/BalanceCard';
 import { ExpensesList } from '../components/ExpensesList';
 import { MonthSelector } from '../components/MonthSelector';
+import { Toast } from '../components/Toast';
 import { fetchGastos } from '../services/api';
 import { GastosResponse, Gasto } from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,6 +49,9 @@ export const HomeScreen: React.FC = () => {
   const [year, setYear] = useState(new Date().getFullYear());
   const [highlightedExpenseId, setHighlightedExpenseId] = useState<string | null>(null);
   const [pendingNavigationId, setPendingNavigationId] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('error');
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
   const flatListRef = useRef<any>(null);
@@ -297,11 +300,7 @@ export const HomeScreen: React.FC = () => {
       
       // Si hay un error y no tenemos datos en caché, mostrar error
       if (!gastosData) {
-        Alert.alert(
-          'Error',
-          'No se pudieron cargar los gastos. Verifica que el servidor esté corriendo.',
-          [{ text: 'OK' }]
-        );
+        showToast('No se pudieron cargar los gastos. Verifica que el servidor esté corriendo.', 'error');
       } else {
         // Si tenemos datos en caché, solo mostrar un mensaje en consola
         console.log('⚠️ [loadGastos] Error al actualizar, usando datos en caché');
@@ -795,9 +794,22 @@ export const HomeScreen: React.FC = () => {
     ? { background: '#111827', card: '#1f2937', text: '#f9fafb', textSecondary: '#9ca3af', border: '#374151', button: '#374151', error: '#ef4444' }
     : { background: '#f9fafb', card: '#ffffff', text: '#1f2937', textSecondary: '#6b7280', border: '#e5e7eb', button: '#f3f4f6', error: '#ef4444' };
 
+  const showToast = (message: string, type: 'success' | 'error' = 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+        duration={3000}
+        type={toastType}
+      />
       <Animated.View style={shakeAnimatedStyle}>
         <MonthSelector
           month={month}
