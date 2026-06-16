@@ -20,9 +20,10 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Gasto } from '../types';
 import { useTheme } from '../config/theme';
+import { spacing, radius, typography } from '../config/design';
+import { SCREEN_BOTTOM_SPACE } from '../config/layout';
 import { searchLocation } from '../services/location';
 import { GlassSurface } from '../components/GlassSurface';
-import { SCREEN_BOTTOM_SPACE } from '../config/layout';
 
 type RootStackParamList = {
   ExpenseDetail: { gasto: Gasto };
@@ -38,20 +39,17 @@ export const ExpenseDetailScreen: React.FC = () => {
   const theme = useTheme();
   const colorScheme = useColorScheme();
   const headerHeight = useHeaderHeight();
-  const isDarkMode = theme.background === '#111827';
-  
-  // Estado para el gasto con ubicación encontrada
+
   const [gasto, setGasto] = useState<Gasto>(initialGasto);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [mapImageError, setMapImageError] = useState(false);
 
   const date = parseISO(gasto.date);
-  const formattedDate = format(date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
-  const formattedTime = format(date, "HH:mm", { locale: es });
+  const formattedDate = format(date, "d 'de' MMMM 'de' yyyy", { locale: es });
+  const formattedTime = format(date, 'HH:mm', { locale: es });
   const amount = Math.abs(gasto.amount);
 
-  // Determinar el estado del gasto
   const status = gasto.status?.toLowerCase() || '';
   const isRejected = gasto.approved === false || status === 'rejected' || status === 'decline';
   const isRefunded = status === 'refund';
@@ -60,311 +58,161 @@ export const ExpenseDetailScreen: React.FC = () => {
   const isPending = !status || status === 'pending' || (!isRejected && !isRefunded && !isReversed && !isComplete);
 
   const getStatusInfo = () => {
-    if (isRejected) {
-      return {
-        label: 'Rechazado',
-        color: theme.error,
-        icon: 'close-circle' as const,
-        bgColor: isDarkMode ? '#2a1f1f' : '#fef2f2',
-      };
-    }
-    if (isRefunded) {
-      return {
-        label: 'Reembolso',
-        color: '#10b981',
-        icon: 'arrow-back-circle' as const,
-        bgColor: isDarkMode ? '#1a2e1f' : '#f0fdf4',
-      };
-    }
-    if (isReversed) {
-      return {
-        label: 'Revertido',
-        color: '#f59e0b',
-        icon: 'refresh-circle' as const,
-        bgColor: isDarkMode ? '#2a241f' : '#fffbeb',
-      };
-    }
-    if (isPending) {
-      return {
-        label: 'Retenido',
-        color: theme.textSecondary,
-        icon: 'time-outline' as const,
-        bgColor: theme.card,
-      };
-    }
-    return {
-      label: 'Aprobado',
-      color: '#10b981',
-      icon: 'checkmark-circle' as const,
-      bgColor: isDarkMode ? '#1a2e1f' : '#f0fdf4',
-    };
+    if (isRejected) return { label: 'Rechazado', color: theme.error, icon: 'close-circle' as const };
+    if (isRefunded) return { label: 'Reembolso', color: theme.success, icon: 'arrow-undo-circle' as const };
+    if (isReversed) return { label: 'Revertido', color: theme.warning, icon: 'refresh-circle' as const };
+    if (isPending) return { label: 'Retenido', color: theme.textSecondary, icon: 'time' as const };
+    return { label: 'Aprobado', color: theme.success, icon: 'checkmark-circle' as const };
   };
 
   const statusInfo = getStatusInfo();
+  const amountColor = isRefunded ? theme.success : theme.error;
+  const hasLocation = !!(gasto.latitude && gasto.longitude);
 
-  // Búsqueda automática de ubicación al cargar la pantalla
   useEffect(() => {
-    const searchLocationAutomatically = async () => {
-      // Solo buscar si no hay ubicación y no se ha buscado antes
-      if (hasSearched || (initialGasto.location || initialGasto.latitude)) {
-        return;
-      }
-
+    const run = async () => {
+      if (hasSearched || initialGasto.location || initialGasto.latitude) return;
       if (!initialGasto.merchant) {
         setHasSearched(true);
         return;
       }
-
       setIsSearchingLocation(true);
       try {
-        const locationInfo = await searchLocation(initialGasto.merchant);
-        
-        if (locationInfo) {
-          // Actualizar el gasto con la información de ubicación encontrada
+        const info = await searchLocation(initialGasto.merchant);
+        if (info) {
           setGasto({
             ...initialGasto,
-            location: locationInfo.location || initialGasto.location,
-            address: locationInfo.address || initialGasto.address,
-            city: locationInfo.city || initialGasto.city,
-            country: locationInfo.country || initialGasto.country,
-            latitude: locationInfo.latitude || initialGasto.latitude,
-            longitude: locationInfo.longitude || initialGasto.longitude,
+            location: info.location || initialGasto.location,
+            address: info.address || initialGasto.address,
+            city: info.city || initialGasto.city,
+            country: info.country || initialGasto.country,
+            latitude: info.latitude || initialGasto.latitude,
+            longitude: info.longitude || initialGasto.longitude,
           });
         }
-      } catch (error) {
-        console.error('Error buscando ubicación:', error);
+      } catch (e) {
+        console.error('Error buscando ubicación:', e);
       } finally {
         setIsSearchingLocation(false);
         setHasSearched(true);
       }
     };
-
-    searchLocationAutomatically();
+    run();
   }, [initialGasto.merchant, initialGasto.location, initialGasto.latitude]);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
-      headerTitle: 'Detalle del Gasto',
-      // Cabecera Liquid Glass: transparente, el contenido pasa por debajo
-      // (sin la "costura" del fondo sólido anterior).
+      headerTitle: 'Detalle',
       headerTransparent: true,
-      headerStyle: {
-        backgroundColor: 'transparent',
-      },
+      headerStyle: { backgroundColor: 'transparent' },
       headerBackground: () => (
-        <GlassSurface
-          glassStyle="regular"
-          fallbackColor={theme.card}
-          style={StyleSheet.absoluteFill}
-        />
+        <GlassSurface glassStyle="regular" fallbackColor={theme.card} style={StyleSheet.absoluteFill} />
       ),
       headerTintColor: theme.text,
     });
   }, [navigation, theme]);
 
+  const openMaps = () => {
+    if (!hasLocation) return;
+    const url = Platform.select({
+      ios: `maps://maps.apple.com/?q=${gasto.latitude},${gasto.longitude}&ll=${gasto.latitude},${gasto.longitude}`,
+      android: `geo:${gasto.latitude},${gasto.longitude}?q=${gasto.latitude},${gasto.longitude}`,
+    });
+    if (url) {
+      Linking.openURL(url).catch(() => {
+        Linking.openURL(
+          `https://maps.apple.com/?q=${gasto.latitude},${gasto.longitude}&ll=${gasto.latitude},${gasto.longitude}`,
+        ).catch(console.error);
+      });
+    }
+  };
+
+  const Row = ({ label, value, last }: { label: string; value: string; last?: boolean }) => (
+    <View>
+      <View style={styles.row}>
+        <Text style={[styles.rowLabel, { color: theme.textSecondary }]}>{label}</Text>
+        <Text style={[styles.rowValue, { color: theme.text }]} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+      {!last && <View style={[styles.separator, { backgroundColor: theme.separator }]} />}
+    </View>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + spacing.md }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Card principal con información del gasto */}
-        <GlassSurface
-          glassStyle="regular"
-          fallbackColor={statusInfo.bgColor}
-          style={[
-            styles.mainCard,
-            {
-              borderColor: statusInfo.color,
-              borderWidth: 2,
-            },
-          ]}
-        >
-          {/* Icono de estado */}
-          <View style={[styles.iconContainer, { backgroundColor: `${statusInfo.color}15` }]}>
-            <Ionicons name={statusInfo.icon} size={48} color={statusInfo.color} />
+        {/* HERO */}
+        <View style={styles.hero}>
+          <View style={[styles.statusRing, { backgroundColor: `${statusInfo.color}1f` }]}>
+            <Ionicons name={statusInfo.icon} size={34} color={statusInfo.color} />
           </View>
-
-          {/* Monto */}
-          <Text style={[styles.amount, { color: isRefunded ? '#10b981' : theme.error }]}>
-            {isRefunded ? '+' : '-'}{amount.toFixed(2)} {gasto.currency}
+          <Text style={[styles.amount, { color: amountColor }]}>
+            {isRefunded ? '+' : '−'}{amount.toFixed(2)}
+            <Text style={styles.amountCurrency}> {gasto.currency}</Text>
           </Text>
-
-          {/* Merchant */}
-          <Text style={[styles.merchant, { color: theme.text }]}>
+          <Text style={[styles.merchant, { color: theme.text }]} numberOfLines={2}>
             {gasto.merchant}
           </Text>
-
-          {/* Badge de estado */}
-          <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
-            <Text style={styles.statusText}>{statusInfo.label}</Text>
+          <View style={[styles.statusPill, { backgroundColor: `${statusInfo.color}1f` }]}>
+            <Ionicons name={statusInfo.icon} size={14} color={statusInfo.color} />
+            <Text style={[styles.statusPillText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
           </View>
-        </GlassSurface>
+        </View>
 
-        {/* Mapa de Apple Maps */}
-        {isSearchingLocation && !(gasto.latitude && gasto.longitude) ? (
-          <View style={[styles.detailsCard, { backgroundColor: theme.card }]}>
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.textSecondary} />
-              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-                Buscando ubicación...
-              </Text>
-            </View>
-          </View>
-        ) : (gasto.latitude && gasto.longitude) ? (
-          <View style={styles.mapCard}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Ubicación</Text>
-            <TouchableOpacity
-              style={[styles.mapContainer, { backgroundColor: theme.background }]}
-              activeOpacity={0.8}
-              onPress={() => {
-                const url = Platform.select({
-                  ios: `maps://maps.apple.com/?q=${gasto.latitude},${gasto.longitude}&ll=${gasto.latitude},${gasto.longitude}`,
-                  android: `geo:${gasto.latitude},${gasto.longitude}?q=${gasto.latitude},${gasto.longitude}`,
-                });
-                if (url) {
-                  Linking.openURL(url).catch(() => {
-                    // Si falla, intentar con URL web de Apple Maps
-                    Linking.openURL(`https://maps.apple.com/?q=${gasto.latitude},${gasto.longitude}&ll=${gasto.latitude},${gasto.longitude}`).catch(console.error);
-                  });
-                }
-              }}
-            >
-              {!mapImageError ? (
-                <Image
-                  source={{
-                    uri: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff0000(${gasto.longitude},${gasto.latitude})/${gasto.longitude},${gasto.latitude},15,0/600x300@2x?access_token=pk.eyJ1IjoiZHZpbmFsczk4IiwiYSI6ImNtOHd2ZWVibTB1amIybHNkdmN3NzZrNnkifQ.EFynoYmI5E_HGUAR2fjlcw`,
-                  }}
-                  style={styles.mapImage}
-                  resizeMode="cover"
-                  onError={() => {
-                    console.log('Error cargando mapa estático, usando fallback');
-                    setMapImageError(true);
-                  }}
-                  onLoad={() => {
-                    console.log('Mapa cargado correctamente');
-                    setMapImageError(false);
-                  }}
-                />
-              ) : (
-                <View style={styles.mapFallback}>
-                  <Ionicons name="location" size={64} color="#007AFF" />
-                  <Text style={[styles.mapFallbackText, { color: theme.text }]}>
-                    {gasto.location || gasto.city || gasto.merchant || 'Ubicación'}
-                  </Text>
-                  <Text style={[styles.mapFallbackCoords, { color: theme.textSecondary }]}>
-                    {gasto.latitude.toFixed(6)}, {gasto.longitude.toFixed(6)}
-                  </Text>
-                </View>
-              )}
-              {/* Overlay solo con el botón, sin cubrir el mapa */}
-              <View style={styles.mapOverlay}>
-                <View style={styles.mapHint}>
-                  <Ionicons name="map-outline" size={18} color="#ffffff" />
-                  <Text style={styles.mapHintText}>Abrir en Apple Maps</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={[styles.detailsCard, { backgroundColor: theme.card }]}>
-            <View style={styles.noLocationContainer}>
-              <Ionicons name="location-outline" size={48} color={theme.textSecondary} />
-              <Text style={[styles.noLocationText, { color: theme.textSecondary }]}>
-                No se pudo encontrar la ubicación
-              </Text>
-            </View>
-          </View>
-        )}
+        {/* DETALLES */}
+        <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>DETALLES</Text>
+        <View style={[styles.group, { backgroundColor: theme.cardElevated }]}>
+          <Row label="Fecha" value={formattedDate} />
+          <Row label="Hora" value={formattedTime} />
+          <Row label="Moneda" value={gasto.currency} />
+          <Row label="ID de transacción" value={String(gasto.id)} last />
+        </View>
 
-        {/* Información detallada */}
-        <GlassSurface glassStyle="regular" fallbackColor={theme.card} style={styles.detailsCard}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Información del Pago</Text>
-
-          {/* Fecha */}
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconContainer, { backgroundColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
-              <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Fecha</Text>
-              <Text style={[styles.detailValue, { color: theme.text }]}>{formattedDate}</Text>
-            </View>
+        {/* UBICACIÓN */}
+        <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>UBICACIÓN</Text>
+        {isSearchingLocation && !hasLocation ? (
+          <View style={[styles.stateBox, { backgroundColor: theme.cardElevated }]}>
+            <ActivityIndicator color={theme.textSecondary} />
+            <Text style={[styles.stateText, { color: theme.textSecondary }]}>Buscando ubicación…</Text>
           </View>
-
-          {/* Hora */}
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconContainer, { backgroundColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
-              <Ionicons name="time-outline" size={20} color={theme.textSecondary} />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Hora</Text>
-              <Text style={[styles.detailValue, { color: theme.text }]}>{formattedTime}</Text>
-            </View>
-          </View>
-
-          {/* ID del gasto */}
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconContainer, { backgroundColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
-              <Ionicons name="receipt-outline" size={20} color={theme.textSecondary} />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>ID de Transacción</Text>
-              <Text style={[styles.detailValue, { color: theme.text }]}>{gasto.id}</Text>
-            </View>
-          </View>
-
-          {/* Estado */}
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconContainer, { backgroundColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
-              <Ionicons name="information-circle-outline" size={20} color={theme.textSecondary} />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Estado</Text>
-              <View style={[styles.statusBadgeSmall, { backgroundColor: statusInfo.color }]}>
-                <Text style={styles.statusTextSmall}>{statusInfo.label}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Moneda */}
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconContainer, { backgroundColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
-              <Ionicons name="cash-outline" size={20} color={theme.textSecondary} />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Moneda</Text>
-              <Text style={[styles.detailValue, { color: theme.text }]}>{gasto.currency}</Text>
-            </View>
-          </View>
-
-          {/* Aprobado */}
-          {gasto.approved !== undefined && (
-            <View style={styles.detailRow}>
-              <View style={[styles.detailIconContainer, { backgroundColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
-                <Ionicons 
-                  name={gasto.approved ? "checkmark-circle-outline" : "close-circle-outline"} 
-                  size={20} 
-                  color={gasto.approved ? '#10b981' : theme.error} 
-                />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Aprobado</Text>
-                <Text style={[
-                  styles.detailValue, 
-                  { color: gasto.approved ? '#10b981' : theme.error }
-                ]}>
-                  {gasto.approved ? 'Sí' : 'No'}
+        ) : hasLocation ? (
+          <TouchableOpacity style={styles.mapCard} activeOpacity={0.9} onPress={openMaps}>
+            {!mapImageError ? (
+              <Image
+                source={{
+                  uri: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff0000(${gasto.longitude},${gasto.latitude})/${gasto.longitude},${gasto.latitude},14.5,0/700x360@2x?access_token=pk.eyJ1IjoiZHZpbmFsczk4IiwiYSI6ImNtOHd2ZWVibTB1amIybHNkdmN3NzZrNnkifQ.EFynoYmI5E_HGUAR2fjlcw`,
+                }}
+                style={styles.mapImage}
+                resizeMode="cover"
+                onError={() => setMapImageError(true)}
+              />
+            ) : (
+              <View style={[styles.mapFallback, { backgroundColor: theme.inputBg }]}>
+                <Ionicons name="location" size={48} color={theme.primary} />
+                <Text style={[styles.mapFallbackText, { color: theme.text }]}>
+                  {gasto.location || gasto.city || gasto.merchant || 'Ubicación'}
                 </Text>
               </View>
+            )}
+            <View style={styles.mapButton}>
+              <Ionicons name="map-outline" size={16} color="#ffffff" />
+              <Text style={styles.mapButtonText}>Abrir en Apple Maps</Text>
             </View>
-          )}
-        </GlassSurface>
-
-
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.stateBox, { backgroundColor: theme.cardElevated }]}>
+            <Ionicons name="location-outline" size={28} color={theme.textTertiary} />
+            <Text style={[styles.stateText, { color: theme.textSecondary }]}>
+              Ubicación no disponible
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -374,209 +222,138 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: spacing.lg,
     paddingBottom: SCREEN_BOTTOM_SPACE,
   },
-  mainCard: {
-    borderRadius: 20,
-    padding: 24,
+
+  // Hero
+  hero: {
     alignItems: 'center',
-    marginBottom: 16,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
+  statusRing: {
+    width: 76,
+    height: 76,
+    borderRadius: radius.pill,
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
   amount: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    letterSpacing: 1,
+    fontSize: 48,
+    fontWeight: '800',
+    letterSpacing: -1.5,
+    marginBottom: spacing.xs,
+  },
+  amountCurrency: {
+    fontSize: 24,
+    fontWeight: '700',
   },
   merchant: {
-    fontSize: 20,
-    fontWeight: '600',
+    ...typography.title3,
     textAlign: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  statusBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs + 1,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
   },
-  statusText: {
-    color: '#ffffff',
-    fontSize: 12,
+  statusPillText: {
+    ...typography.caption,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.6,
   },
-  detailsCard: {
-    borderRadius: 16,
-    padding: 20,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
+
+  // Secciones / lista agrupada
+  sectionLabel: {
+    ...typography.caption,
     fontWeight: '700',
-    marginBottom: 20,
+    letterSpacing: 0.8,
+    marginLeft: spacing.xs,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
   },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  loadingText: {
-    fontSize: 14,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  noLocationContainer: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  noLocationText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  mapCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    backgroundColor: 'transparent',
-  },
-  mapContainer: {
-    marginTop: 16,
-    borderRadius: 12,
+  group: {
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    height: 300,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    position: 'relative',
-    backgroundColor: '#f0f0f0',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.lg,
+    paddingVertical: 15,
+    paddingHorizontal: spacing.lg,
+    minHeight: 52,
+  },
+  rowLabel: {
+    ...typography.callout,
+  },
+  rowValue: {
+    ...typography.callout,
+    fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: spacing.lg,
+  },
+
+  // Mapa
+  mapCard: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    height: 200,
   },
   mapImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f0f0f0',
   },
   mapFallback: {
     width: '100%',
     height: '100%',
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   mapFallbackText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    textAlign: 'center',
+    ...typography.headline,
   },
-  mapFallbackCoords: {
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  mapOverlay: {
+  mapButton: {
     position: 'absolute',
-    bottom: 12,
-    right: 12,
-    left: 12,
-    alignItems: 'flex-end',
-  },
-  mapHint: {
+    bottom: spacing.md,
+    right: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 8,
+    gap: spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
   },
-  mapHintText: {
+  mapButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    ...typography.subhead,
     fontWeight: '600',
   },
-  openMapsButton: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    backgroundColor: '#007AFF',
-    flexDirection: 'row',
+
+  // Estados (cargando / sin ubicación)
+  stateBox: {
+    borderRadius: radius.lg,
+    paddingVertical: spacing.xxl,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    gap: spacing.sm,
   },
-  openMapsButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  detailIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  statusBadgeSmall: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  statusTextSmall: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  stateText: {
+    ...typography.subhead,
   },
 });
-

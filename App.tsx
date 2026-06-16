@@ -35,8 +35,8 @@ function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen 
-        name="ExpenseDetail" 
+      <Stack.Screen
+        name="ExpenseDetail"
         component={ExpenseDetailScreen}
         options={{
           headerShown: true,
