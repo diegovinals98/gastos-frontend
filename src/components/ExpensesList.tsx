@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, Text, View, RefreshControl } from 'react-native';
 import { ExpenseItem } from './ExpenseItem';
 import { Gasto } from '../types';
 import { useTheme } from '../config/theme';
+import { SCREEN_BOTTOM_SPACE } from '../config/layout';
 
 interface ExpensesListProps {
   gastos: Gasto[];
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {
-    paddingBottom: 20,
+    paddingBottom: SCREEN_BOTTOM_SPACE,
   },
   emptyListContainer: {
     flexGrow: 1,

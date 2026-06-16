@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Text,
   TextInput,
@@ -12,12 +11,14 @@ import {
   RefreshControl,
   Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { saveFactorialCookie, getFactorialCookie, getCardId, saveCardId, testCookie, TestCookieResponse, getPushTokens, registerPushToken, unregisterPushToken, testNotification } from '../services/api';
 import { useTheme } from '../config/theme';
+import { SCREEN_BOTTOM_SPACE } from '../config/layout';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../components/Toast';
 
@@ -307,7 +308,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Toast
         message={toastMessage}
@@ -653,7 +654,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: SCREEN_BOTTOM_SPACE,
   },
   header: {
     paddingHorizontal: 20,

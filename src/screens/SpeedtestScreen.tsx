@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Text,
   View,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
@@ -23,6 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../config/theme';
+import { SCREEN_BOTTOM_SPACE } from '../config/layout';
 import { fetchSpeedtestSummary, fetchSpeedtestHistory } from '../services/api';
 import { SpeedtestSummary, SpeedtestResult, SpeedtestHistoryResponse } from '../types';
 import { format, parseISO } from 'date-fns';
@@ -314,7 +315,7 @@ export const SpeedtestScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.background }]}>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <ScrollView
           style={styles.scrollView}
@@ -344,7 +345,7 @@ export const SpeedtestScreen: React.FC = () => {
     : 200;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <ScrollView
         style={styles.scrollView}
@@ -559,7 +560,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 32,
+    paddingBottom: SCREEN_BOTTOM_SPACE,
   },
   header: {
     paddingHorizontal: 20,

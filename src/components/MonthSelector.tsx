@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../config/theme';
+import { GlassSurface } from './GlassSurface';
 
 interface MonthSelectorProps {
   month: number;
@@ -30,7 +31,11 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
   const yearOnly = monthParts[1];
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+    <GlassSurface
+      glassStyle="regular"
+      fallbackColor={theme.card}
+      style={[styles.container, { borderBottomColor: theme.border }]}
+    >
       <View style={styles.content}>
         <TouchableOpacity 
           onPress={onPrevious} 
@@ -58,7 +63,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
           />
         </TouchableOpacity>
       </View>
-    </View>
+    </GlassSurface>
   );
 };
 

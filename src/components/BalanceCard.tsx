@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { useTheme } from '../config/theme';
+import { GlassSurface } from './GlassSurface';
 
 interface BalanceCardProps {
   totalSpent: number;
@@ -39,7 +40,11 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   const monthName = format(new Date(year, month - 1), 'MMMM', { locale: es });
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+    <GlassSurface
+      glassStyle="regular"
+      fallbackColor={theme.card}
+      style={[styles.container, { shadowColor: theme.shadow }]}
+    >
 
       <View style={styles.balanceContainer}>
         <Text style={[styles.label, { color: theme.textSecondary }]}>Saldo restante</Text>
@@ -101,7 +106,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
           ]}
         />
       </View>
-    </View>
+    </GlassSurface>
   );
 };
 

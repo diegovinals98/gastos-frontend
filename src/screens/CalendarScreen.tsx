@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
-  SafeAreaView,
   View,
   Text,
   TouchableOpacity,
@@ -10,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -32,6 +32,7 @@ import {
 import { es } from 'date-fns/locale/es';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../config/theme';
+import { SCREEN_BOTTOM_SPACE } from '../config/layout';
 import { fetchGastos } from '../services/api';
 import { GastosResponse, Gasto } from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -691,7 +692,7 @@ export const CalendarScreen: React.FC = () => {
   const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <View style={styles.contentWrapper}>
             {/* Header fijo - siempre visible */}
@@ -931,7 +932,7 @@ const styles = StyleSheet.create({
   },
   gastosScrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: SCREEN_BOTTOM_SPACE,
   },
   gastosContainer: {
     paddingHorizontal: 0,

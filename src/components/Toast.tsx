@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { Text, StyleSheet, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -8,6 +10,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { useTheme } from '../config/theme';
+import { GlassSurface } from './GlassSurface';
 
 const { width } = Dimensions.get('window');
 
@@ -29,12 +32,23 @@ export const Toast: React.FC<ToastProps> = ({
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const isDark = theme.background === '#111827';
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const SWIPE_THRESHOLD = -50; // 50px hacia arriba para cerrar
-  
-  const backgroundColor = type === 'success' 
+
+  // El color semántico va solo en el icono. El cristal lleva un tinte
+  // NEUTRO con más cuerpo (como el material de las notificaciones de iOS),
+  // para que tenga fondo y el texto se lea bien sobre cualquier contenido.
+  const accentColor = type === 'success'
     ? (theme.success || '#10b981')
     : (theme.error || '#ef4444');
+  const tintColor = isDark
+    ? 'rgba(38, 38, 42, 0.78)'
+    : 'rgba(255, 255, 255, 0.78)';
+  // Borde hairline para definir el panel de cristal sobre cualquier fondo.
+  const borderColor = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.08)';
+  const iconName = type === 'success' ? 'checkmark-circle' : 'alert-circle';
 
   const cancelTimer = useCallback(() => {
     if (timerRef.current) {
@@ -118,41 +132,51 @@ export const Toast: React.FC<ToastProps> = ({
 
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            backgroundColor,
-          },
-          animatedStyle,
-        ]}
-      >
-        <Text style={styles.text}>{message}</Text>
+      <Animated.View style={[styles.wrapper, { top: insets.top + 8 }, animatedStyle]}>
+        <GlassSurface
+          glassStyle="regular"
+          tintColor={tintColor}
+          fallbackColor={isDark ? theme.card : '#ffffff'}
+          style={[styles.glass, { borderColor }]}
+        >
+          <Ionicons name={iconName} size={22} color={accentColor} />
+          <Text style={[styles.text, { color: theme.text }]} numberOfLines={3}>
+            {message}
+          </Text>
+        </GlassSurface>
       </Animated.View>
     </GestureDetector>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
-    padding: 16,
-    borderRadius: 12,
+    left: 16,
+    right: 16,
+    borderRadius: 22,
+    // Sombra suave para que la notificación "flote" sobre el contenido.
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 8,
     zIndex: 9999,
   },
+  glass: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
   text: {
-    color: '#ffffff',
+    flex: 1,
     fontSize: 15,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: '600',
   },
 });
 

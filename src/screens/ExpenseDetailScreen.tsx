@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   View,
   Text,
@@ -12,6 +11,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { StatusBar } from 'expo-status-bar';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -21,6 +21,8 @@ import { es } from 'date-fns/locale/es';
 import { Gasto } from '../types';
 import { useTheme } from '../config/theme';
 import { searchLocation } from '../services/location';
+import { GlassSurface } from '../components/GlassSurface';
+import { SCREEN_BOTTOM_SPACE } from '../config/layout';
 
 type RootStackParamList = {
   ExpenseDetail: { gasto: Gasto };
@@ -35,6 +37,7 @@ export const ExpenseDetailScreen: React.FC = () => {
   const { gasto: initialGasto } = route.params;
   const theme = useTheme();
   const colorScheme = useColorScheme();
+  const headerHeight = useHeaderHeight();
   const isDarkMode = theme.background === '#111827';
   
   // Estado para el gasto con ubicación encontrada
@@ -143,30 +146,43 @@ export const ExpenseDetailScreen: React.FC = () => {
     navigation.setOptions({
       headerShown: true,
       headerTitle: 'Detalle del Gasto',
+      // Cabecera Liquid Glass: transparente, el contenido pasa por debajo
+      // (sin la "costura" del fondo sólido anterior).
+      headerTransparent: true,
       headerStyle: {
-        backgroundColor: theme.card,
+        backgroundColor: 'transparent',
       },
+      headerBackground: () => (
+        <GlassSurface
+          glassStyle="regular"
+          fallbackColor={theme.card}
+          style={StyleSheet.absoluteFill}
+        />
+      ),
       headerTintColor: theme.text,
     });
   }, [navigation, theme]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Card principal con información del gasto */}
-        <View style={[
-          styles.mainCard,
-          {
-            backgroundColor: statusInfo.bgColor,
-            borderColor: statusInfo.color,
-            borderWidth: 2,
-          }
-        ]}>
+        <GlassSurface
+          glassStyle="regular"
+          fallbackColor={statusInfo.bgColor}
+          style={[
+            styles.mainCard,
+            {
+              borderColor: statusInfo.color,
+              borderWidth: 2,
+            },
+          ]}
+        >
           {/* Icono de estado */}
           <View style={[styles.iconContainer, { backgroundColor: `${statusInfo.color}15` }]}>
             <Ionicons name={statusInfo.icon} size={48} color={statusInfo.color} />
@@ -186,7 +202,7 @@ export const ExpenseDetailScreen: React.FC = () => {
           <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
             <Text style={styles.statusText}>{statusInfo.label}</Text>
           </View>
-        </View>
+        </GlassSurface>
 
         {/* Mapa de Apple Maps */}
         {isSearchingLocation && !(gasto.latitude && gasto.longitude) ? (
@@ -265,7 +281,7 @@ export const ExpenseDetailScreen: React.FC = () => {
         )}
 
         {/* Información detallada */}
-        <View style={[styles.detailsCard, { backgroundColor: theme.card }]}>
+        <GlassSurface glassStyle="regular" fallbackColor={theme.card} style={styles.detailsCard}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Información del Pago</Text>
 
           {/* Fecha */}
@@ -346,11 +362,11 @@ export const ExpenseDetailScreen: React.FC = () => {
               </View>
             </View>
           )}
-        </View>
+        </GlassSurface>
 
-        
+
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -363,7 +379,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: SCREEN_BOTTOM_SPACE,
   },
   mainCard: {
     borderRadius: 20,

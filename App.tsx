@@ -9,10 +9,10 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -26,7 +26,7 @@ import { RumiScreen } from './src/screens/RumiScreen';
 import { useTheme } from './src/config/theme';
 import { Gasto } from './src/types';
 
-const Tab = createBottomTabNavigator();
+const Tab = createNativeBottomTabNavigator();
 const Stack = createStackNavigator();
 const AuthStack = createStackNavigator();
 
@@ -93,69 +93,51 @@ function AppContent() {
           <AuthStackNavigator />
         ) : (
           <Tab.Navigator
-            screenOptions={{
-              headerShown: false,
-              tabBarActiveTintColor: '#3b82f6',
-              tabBarInactiveTintColor: theme.textSecondary,
-              tabBarStyle: {
-                backgroundColor: theme.card,
-                borderTopColor: theme.border,
-                borderTopWidth: 1,
-              },
-              tabBarLabelStyle: {
-                fontSize: 12,
-                fontWeight: '500',
-              },
-            }}
+            // Tab bar NATIVA (UITabBarController). En iOS 26 el sistema le
+            // aplica Liquid Glass automáticamente, con su cápsula de selección.
+            tabBarActiveTintColor="#3b82f6"
+            tabBarInactiveTintColor={theme.textSecondary}
+            translucent
+            hapticFeedbackEnabled
           >
-            <Tab.Screen 
-              name="Home" 
+            <Tab.Screen
+              name="Home"
               component={HomeStack}
               options={{
                 tabBarLabel: 'Pagos',
-                tabBarIcon: ({ color, size }) => (
-                  <Ionicons name="wallet-outline" size={size} color={color} />
-                ),
+                tabBarIcon: () => ({ sfSymbol: 'creditcard.fill' }),
               }}
             />
-            <Tab.Screen 
-              name="Calendar" 
+            <Tab.Screen
+              name="Calendar"
               component={CalendarScreen}
               options={{
                 tabBarLabel: 'Calendario',
-                tabBarIcon: ({ color, size }) => (
-                  <Ionicons name="calendar-outline" size={size} color={color} />
-                ),
+                tabBarIcon: () => ({ sfSymbol: 'calendar' }),
               }}
             />
-            <Tab.Screen 
-              name="Speedtest" 
+            <Tab.Screen
+              name="Speedtest"
               component={SpeedtestScreen}
               options={{
                 tabBarLabel: 'Speedtest',
-                tabBarIcon: ({ color, size }) => (
-                  <Ionicons name="speedometer-outline" size={size} color={color} />
-                ),
+                tabBarIcon: () => ({ sfSymbol: 'speedometer' }),
               }}
             />
-            <Tab.Screen 
-              name="Rumi" 
+            <Tab.Screen
+              name="Rumi"
               component={RumiScreen}
               options={{
                 tabBarLabel: 'RUMI',
-                tabBarIcon: ({ color, size }) => (
-                  <Ionicons name="game-controller-outline" size={size} color={color} />
-                ),
+                tabBarIcon: () => ({ sfSymbol: 'gamecontroller.fill' }),
               }}
             />
-            <Tab.Screen 
-              name="Settings" 
+            <Tab.Screen
+              name="Settings"
               component={SettingsScreen}
               options={{
                 tabBarLabel: 'Ajustes',
-                tabBarIcon: ({ color, size }) => (
-                  <Ionicons name="settings-outline" size={size} color={color} />
-                ),
+                tabBarIcon: () => ({ sfSymbol: 'gearshape.fill' }),
               }}
             />
           </Tab.Navigator>
@@ -168,9 +150,11 @@ function AppContent() {
 // Main App Component with AuthProvider
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

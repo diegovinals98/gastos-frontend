@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Text,
   TextInput,
@@ -9,6 +8,7 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
@@ -24,6 +24,7 @@ import Animated, {
   Layout,
 } from 'react-native-reanimated';
 import { useTheme } from '../config/theme';
+import { SCREEN_BOTTOM_SPACE } from '../config/layout';
 import { Toast } from '../components/Toast';
 import * as Haptics from 'expo-haptics';
 import { AudioPlayer, useAudioPlayer } from 'expo-audio';
@@ -446,7 +447,7 @@ export const RumiScreen: React.FC = () => {
   const currentPlayer = players[currentPlayerIndex] || '';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Toast
         message={toastMessage}
@@ -681,7 +682,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: SCREEN_BOTTOM_SPACE,
   },
   header: {
     paddingHorizontal: 20,

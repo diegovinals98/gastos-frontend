@@ -2,6 +2,10 @@ node_modules/
 .expo/
 .expo-shared/
 dist/
+
+# Carpetas nativas generadas por expo prebuild (CNG) — se regeneran, no se versionan
+/ios
+/android
 npm-debug.*
 *.jks
 *.p8
