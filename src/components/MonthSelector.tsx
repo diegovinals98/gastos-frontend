@@ -33,7 +33,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
     <View style={styles.container}>
       <TouchableOpacity
         onPress={onPrevious}
-        style={[styles.button, { backgroundColor: theme.inputBg }]}
+        style={[styles.button, { backgroundColor: theme.card }]}
         activeOpacity={0.6}
         hitSlop={8}
       >
@@ -50,7 +50,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
         disabled={isNextDisabled}
         activeOpacity={0.6}
         hitSlop={8}
-        style={[styles.button, { backgroundColor: theme.inputBg, opacity: isNextDisabled ? 0.4 : 1 }]}
+        style={[styles.button, { backgroundColor: theme.card, opacity: isNextDisabled ? 0.4 : 1 }]}
       >
         <Ionicons
           name="chevron-forward"
