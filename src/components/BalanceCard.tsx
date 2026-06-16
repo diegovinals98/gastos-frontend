@@ -59,9 +59,6 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
           ]}
         />
       </View>
-      <Text style={[styles.progressCaption, { color: theme.textTertiary }]}>
-        {absTotalSpent.toFixed(0)} de {companyBudget.toFixed(0)} € · {percentage.toFixed(0)}% usado
-      </Text>
 
       {/* Presupuesto de nómina (solo si se superó el de empresa) */}
       {absTotalSpent >= companyBudget && (
@@ -140,15 +137,11 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: radius.pill,
     overflow: 'hidden',
+    marginBottom: spacing.xl,
   },
   progressFill: {
     height: '100%',
     borderRadius: radius.pill,
-  },
-  progressCaption: {
-    ...typography.footnote,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xl,
   },
   payrollBlock: {
     width: '100%',

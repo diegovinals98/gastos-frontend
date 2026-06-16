@@ -17,7 +17,7 @@
       "icon": "./assets/icon_liquid.icon",
       "supportsTablet": true,
       "bundleIdentifier": "com.factorial.gastos",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Esta app necesita acceso a las notificaciones para recordarte sobre tus gastos.",
         "ITSAppUsesNonExemptEncryption": false
@@ -29,7 +29,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.factorial.gastos",
-      "versionCode": 1,
+      "versionCode": 2,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED"
       ]
