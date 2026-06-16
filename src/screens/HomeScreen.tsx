@@ -5,6 +5,7 @@ import {
   AppStateStatus,
   useColorScheme,
   View,
+  Text,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +31,8 @@ import {
   registerForPushNotificationsAsync,
 } from '../services/notifications';
 import { COMPANY_BUDGET, PAYROLL_BUDGET } from '../config/env';
+import { useTheme } from '../config/theme';
+import { spacing, typography } from '../config/design';
 import * as Notifications from 'expo-notifications';
 import * as Linking from 'expo-linking';
 
@@ -790,9 +793,7 @@ export const HomeScreen: React.FC = () => {
     .reduce((sum, gasto) => sum + gasto.amount, 0) || 0;
   
   const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' 
-    ? { background: '#111827', card: '#1f2937', text: '#f9fafb', textSecondary: '#9ca3af', border: '#374151', button: '#374151', error: '#ef4444' }
-    : { background: '#f9fafb', card: '#ffffff', text: '#1f2937', textSecondary: '#6b7280', border: '#e5e7eb', button: '#f3f4f6', error: '#ef4444' };
+  const theme = useTheme();
 
   const showToast = (message: string, type: 'success' | 'error' = 'error') => {
     setToastMessage(message);
@@ -828,10 +829,23 @@ export const HomeScreen: React.FC = () => {
           year={year}
         />
       )}
-      
+
+      {gastosData && (
+        <View style={styles.listHeader}>
+          <Text style={[styles.listTitle, { color: theme.text }]}>Movimientos</Text>
+          {!!gastosData.gastos?.length && (
+            <View style={[styles.countBadge, { backgroundColor: theme.inputBg }]}>
+              <Text style={[styles.countText, { color: theme.textSecondary }]}>
+                {gastosData.gastos.length}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.contentContainer, animatedStyle]}>
-          <ExpensesList 
+          <ExpensesList
             gastos={gastosData?.gastos || []} 
             isLoading={loading}
             refreshing={refreshing}
@@ -851,6 +865,29 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  listTitle: {
+    ...typography.title3,
+  },
+  countBadge: {
+    minWidth: 24,
+    height: 22,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: {
+    ...typography.caption,
+    fontWeight: '700',
   },
 });
 

@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale/es';
 import { useTheme } from '../config/theme';
+import { spacing, radius, typography, cardShadow } from '../config/design';
 import { GlassSurface } from './GlassSurface';
 
 interface BalanceCardProps {
@@ -17,94 +16,92 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   totalSpent,
   companyBudget,
   payrollBudget,
-  month,
-  year,
 }) => {
   const theme = useTheme();
-  const totalBudget = companyBudget + payrollBudget;
   const absTotalSpent = Math.abs(totalSpent);
-  
-  // Calcular cuánto se consume de cada presupuesto
+
   const companySpent = Math.min(absTotalSpent, companyBudget);
   const payrollSpent = Math.max(0, absTotalSpent - companyBudget);
   const companyRemaining = companyBudget - companySpent;
   const payrollRemaining = payrollBudget - payrollSpent;
-  
-  // El saldo restante solo considera el presupuesto de la empresa (los 20€ de nómina no se deben gastar)
+
   const remaining = companyRemaining;
   const percentage = companyBudget > 0 ? (absTotalSpent / companyBudget) * 100 : 0;
   const isOverBudget = remaining < 0;
   const isCompanyBudgetMaxed = absTotalSpent >= companyBudget;
   const isPayrollBudgetMaxed = payrollSpent >= payrollBudget;
 
-  const monthName = format(new Date(year, month - 1), 'MMMM', { locale: es });
+  const barColor = isCompanyBudgetMaxed || isOverBudget
+    ? theme.error
+    : percentage > 80
+      ? theme.warning
+      : theme.success;
+  const amountColor = isOverBudget ? theme.error : theme.success;
 
   return (
     <GlassSurface
       glassStyle="regular"
-      fallbackColor={theme.card}
+      fallbackColor={theme.cardElevated}
       style={[styles.container, { shadowColor: theme.shadow }]}
     >
+      {/* Hero: saldo restante */}
+      <Text style={[styles.label, { color: theme.textSecondary }]}>SALDO RESTANTE</Text>
+      <Text style={[styles.amount, { color: amountColor }]}>
+        {remaining.toFixed(2)}<Text style={styles.currency}> €</Text>
+      </Text>
 
-      <View style={styles.balanceContainer}>
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Saldo restante</Text>
-        <Text style={[styles.amount, { color: theme.success }, isOverBudget && { color: theme.error }]}>
-          {remaining.toFixed(2)} €
-        </Text>
-      </View>
-
-      <View style={styles.budgetBreakdown}>
-        {/* Solo mostrar presupuesto de nómina si se ha alcanzado el presupuesto de la empresa */}
-        {absTotalSpent >= companyBudget && (
-          <View style={styles.budgetItem}>
-            <View style={styles.budgetHeader}>
-              <Text style={[styles.budgetLabel, { color: theme.textSecondary }]}>Presupuesto Nómina</Text>
-              <Text style={[styles.budgetAmount, { color: theme.text }]}>
-                {payrollSpent.toFixed(2)} / {payrollBudget.toFixed(2)} €
-              </Text>
-            </View>
-            <View style={[styles.budgetProgressBar, { backgroundColor: theme.border }]}>
-              <View
-                style={[
-                  styles.budgetProgressFill,
-                  {
-                    width: `${Math.min((payrollSpent / payrollBudget) * 100, 100)}%`,
-                    backgroundColor: isPayrollBudgetMaxed ? theme.error : payrollSpent > 0 ? theme.warning : theme.success,
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.stat}>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Gastado</Text>
-          <Text style={[styles.statValue, { color: theme.text }]}>{absTotalSpent.toFixed(2)} €</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Presupuesto Empresa</Text>
-          <Text style={[styles.statValue, { color: theme.text }]}>{companyBudget.toFixed(2)} €</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>% usado</Text>
-          <Text style={[styles.statValue, { color: theme.text }, isOverBudget && { color: theme.error }]}>
-            {percentage.toFixed(1)}%
-          </Text>
-        </View>
-      </View>
-
-      <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
+      {/* Barra de progreso principal */}
+      <View style={[styles.progressBar, { backgroundColor: theme.separator }]}>
         <View
           style={[
             styles.progressFill,
-            {
-              width: `${Math.min(percentage, 100)}%`,
-              backgroundColor: isCompanyBudgetMaxed ? theme.error : isOverBudget ? theme.error : percentage > 80 ? theme.warning : theme.success,
-            },
+            { width: `${Math.min(percentage, 100)}%`, backgroundColor: barColor },
           ]}
         />
+      </View>
+      <Text style={[styles.progressCaption, { color: theme.textTertiary }]}>
+        {absTotalSpent.toFixed(0)} de {companyBudget.toFixed(0)} € · {percentage.toFixed(0)}% usado
+      </Text>
+
+      {/* Presupuesto de nómina (solo si se superó el de empresa) */}
+      {absTotalSpent >= companyBudget && (
+        <View style={styles.payrollBlock}>
+          <View style={styles.payrollHeader}>
+            <Text style={[styles.payrollLabel, { color: theme.textSecondary }]}>Presupuesto Nómina</Text>
+            <Text style={[styles.payrollAmount, { color: theme.text }]}>
+              {payrollSpent.toFixed(2)} / {payrollBudget.toFixed(2)} €
+            </Text>
+          </View>
+          <View style={[styles.payrollBar, { backgroundColor: theme.separator }]}>
+            <View
+              style={[
+                styles.payrollFill,
+                {
+                  width: `${Math.min((payrollSpent / payrollBudget) * 100, 100)}%`,
+                  backgroundColor: isPayrollBudgetMaxed ? theme.error : theme.warning,
+                },
+              ]}
+            />
+          </View>
+        </View>
+      )}
+
+      {/* Chips de estadísticas */}
+      <View style={styles.chipsRow}>
+        <View style={[styles.chip, { backgroundColor: theme.inputBg }]}>
+          <Text style={[styles.chipLabel, { color: theme.textSecondary }]}>Gastado</Text>
+          <Text style={[styles.chipValue, { color: theme.text }]}>{absTotalSpent.toFixed(2)} €</Text>
+        </View>
+        <View style={[styles.chip, { backgroundColor: theme.inputBg }]}>
+          <Text style={[styles.chipLabel, { color: theme.textSecondary }]}>Presupuesto</Text>
+          <Text style={[styles.chipValue, { color: theme.text }]}>{companyBudget.toFixed(0)} €</Text>
+        </View>
+        <View style={[styles.chip, { backgroundColor: theme.inputBg }]}>
+          <Text style={[styles.chipLabel, { color: theme.textSecondary }]}>% usado</Text>
+          <Text style={[styles.chipValue, { color: isOverBudget ? theme.error : theme.text }]}>
+            {percentage.toFixed(0)}%
+          </Text>
+        </View>
       </View>
     </GlassSurface>
   );
@@ -112,84 +109,92 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
-    padding: 20,
-    margin: 16,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  monthText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  balanceContainer: {
+    borderRadius: radius.xl,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
     alignItems: 'center',
-    marginBottom: 20,
+    overflow: 'hidden',
+    ...cardShadow,
   },
   label: {
-    fontSize: 14,
-    marginBottom: 8,
+    ...typography.caption,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: spacing.sm,
   },
   amount: {
-    fontSize: 36,
-    fontWeight: 'bold',
+    fontSize: 46,
+    fontWeight: '800',
+    letterSpacing: -1,
+    marginBottom: spacing.xl,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-  },
-  stat: {
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
+  currency: {
+    fontSize: 26,
+    fontWeight: '700',
   },
   progressBar: {
-    height: 8,
-    borderRadius: 4,
+    width: '100%',
+    height: 10,
+    borderRadius: radius.pill,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: radius.pill,
   },
-  budgetBreakdown: {
-    marginBottom: 20,
+  progressCaption: {
+    ...typography.footnote,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
-  budgetItem: {
-    marginBottom: 16,
+  payrollBlock: {
+    width: '100%',
+    marginBottom: spacing.lg,
   },
-  budgetHeader: {
+  payrollHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
-  budgetLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  budgetAmount: {
-    fontSize: 14,
+  payrollLabel: {
+    ...typography.footnote,
     fontWeight: '600',
   },
-  budgetProgressBar: {
+  payrollAmount: {
+    ...typography.footnote,
+    fontWeight: '700',
+  },
+  payrollBar: {
     height: 6,
-    borderRadius: 3,
+    borderRadius: radius.pill,
     overflow: 'hidden',
   },
-  budgetProgressFill: {
+  payrollFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: radius.pill,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  chip: {
+    flex: 1,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+  },
+  chipLabel: {
+    ...typography.caption,
+    marginBottom: 2,
+  },
+  chipValue: {
+    ...typography.subhead,
+    fontWeight: '700',
   },
 });
-

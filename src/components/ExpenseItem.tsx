@@ -224,10 +224,8 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ gasto, isHighlighted =
       <Animated.View style={[
         styles.container,
         styles.containerCompact,
-        { 
+        {
           backgroundColor: statusStyles.containerBg,
-          borderColor: statusStyles.borderColor,
-          borderWidth: statusStyles.borderWidth,
           shadowColor: theme.shadow,
           opacity: statusStyles.opacity,
         },
@@ -344,19 +342,19 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     marginHorizontal: 16,
-    marginVertical: 8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginVertical: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
     alignItems: 'center',
   },
   containerCompact: {
-    padding: 12,
-    marginVertical: 4,
-    borderRadius: 12,
+    padding: 14,
+    marginVertical: 5,
+    borderRadius: 16,
   },
   iconContainer: {
     width: 48,
