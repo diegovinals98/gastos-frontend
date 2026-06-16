@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../config/theme';
+import { spacing, radius, typography, cardShadow, controlHeight } from '../config/design';
 import { Toast } from '../components/Toast';
 
 interface RegisterScreenProps {
@@ -52,17 +53,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
       showToast('Por favor completa todos los campos', 'error');
       return;
     }
-
     if (!validateEmail(email)) {
       showToast('Por favor ingresa un email válido', 'error');
       return;
     }
-
     if (password.length < 6) {
       showToast('La contraseña debe tener al menos 6 caracteres', 'error');
       return;
     }
-
     if (password !== confirmPassword) {
       showToast('Las contraseñas no coinciden', 'error');
       return;
@@ -71,7 +69,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
     setLoading(true);
     try {
       await register({ email: email.trim(), password });
-      // Navigation will be handled by App.tsx based on auth state
     } catch (error: any) {
       showToast(error.message || 'Error al registrar usuario', 'error');
     } finally {
@@ -98,122 +95,119 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <View style={[styles.iconContainer, { backgroundColor: theme.button }]}>
-                <Ionicons name="person-add-outline" size={32} color="#3b82f6" />
+          <View style={styles.header}>
+            <View style={[styles.iconContainer, { backgroundColor: theme.primarySoft }]}>
+              <Ionicons name="person-add-outline" size={30} color={theme.primary} />
+            </View>
+            <Text style={[styles.title, { color: theme.text }]}>Crear Cuenta</Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              Regístrate para comenzar
+            </Text>
+          </View>
+
+          <View style={[styles.form, { backgroundColor: theme.cardElevated, shadowColor: theme.shadow }]}>
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+              <View style={[styles.inputWrapper, { backgroundColor: theme.inputBg }]}>
+                <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: theme.text }]}
+                  placeholder="usuario@ejemplo.com"
+                  placeholderTextColor={theme.textTertiary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
               </View>
-              <Text style={[styles.title, { color: theme.text }]}>Crear Cuenta</Text>
-              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                Regístrate para comenzar
-              </Text>
             </View>
 
-            <View style={[styles.form, { backgroundColor: theme.card }]}>
-              <View style={styles.inputContainer}>
-                <Text style={[styles.label, { color: theme.text }]}>Email</Text>
-                <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.background }]}>
-                  <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: theme.text }]}
-                    placeholder="usuario@ejemplo.com"
-                    placeholderTextColor={theme.textSecondary}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={[styles.label, { color: theme.text }]}>Contraseña</Text>
-                <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.background }]}>
-                  <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: theme.text }]}
-                    placeholder="Mínimo 6 caracteres"
-                    placeholderTextColor={theme.textSecondary}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                    disabled={loading}
-                  >
-                    <Ionicons
-                      name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                      size={20}
-                      color={theme.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={[styles.label, { color: theme.text }]}>Confirmar Contraseña</Text>
-                <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.background }]}>
-                  <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: theme.text }]}
-                    placeholder="Confirma tu contraseña"
-                    placeholderTextColor={theme.textSecondary}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={styles.eyeIcon}
-                    disabled={loading}
-                  >
-                    <Ionicons
-                      name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
-                      size={20}
-                      color={theme.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  { backgroundColor: '#3b82f6' },
-                  loading && styles.buttonDisabled
-                ]}
-                onPress={handleRegister}
-                disabled={loading}
-                activeOpacity={0.7}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Registrarse</Text>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-                  ¿Ya tienes una cuenta?{' '}
-                </Text>
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: theme.textSecondary }]}>Contraseña</Text>
+              <View style={[styles.inputWrapper, { backgroundColor: theme.inputBg }]}>
+                <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: theme.text }]}
+                  placeholder="Mínimo 6 caracteres"
+                  placeholderTextColor={theme.textTertiary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('Login')}
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
                   disabled={loading}
+                  hitSlop={8}
                 >
-                  <Text style={[styles.footerLink, { color: '#3b82f6' }]}>Inicia Sesión</Text>
+                  <Ionicons
+                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color={theme.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: theme.textSecondary }]}>Confirmar Contraseña</Text>
+              <View style={[styles.inputWrapper, { backgroundColor: theme.inputBg }]}>
+                <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: theme.text }]}
+                  placeholder="Confirma tu contraseña"
+                  placeholderTextColor={theme.textTertiary}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeIcon}
+                  disabled={loading}
+                  hitSlop={8}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color={theme.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                { backgroundColor: theme.primary, shadowColor: theme.primary },
+                loading && styles.buttonDisabled,
+              ]}
+              onPress={handleRegister}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={theme.onPrimary} size="small" />
+              ) : (
+                <Text style={[styles.primaryButtonText, { color: theme.onPrimary }]}>Registrarse</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.footer}>
+              <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+                ¿Ya tienes una cuenta?{' '}
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={loading} hitSlop={8}>
+                <Text style={[styles.footerLink, { color: theme.primary }]}>Inicia Sesión</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -232,61 +226,52 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
+    padding: spacing.xl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxxl,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    ...typography.largeTitle,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    fontWeight: '400',
+    ...typography.callout,
   },
   form: {
-    padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: spacing.xxl,
+    borderRadius: radius.xl,
+    ...cardShadow,
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: 14,
+    ...typography.footnote,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 50,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    height: controlHeight,
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   input: {
     flex: 1,
@@ -294,24 +279,21 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   eyeIcon: {
-    padding: 4,
+    padding: spacing.xs,
   },
   primaryButton: {
-    height: 50,
-    borderRadius: 12,
+    height: controlHeight,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    marginTop: spacing.sm,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    ...typography.headline,
     letterSpacing: 0.2,
   },
   buttonDisabled: {
@@ -320,14 +302,14 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: spacing.xxl,
   },
   footerText: {
-    fontSize: 14,
+    ...typography.subhead,
+    fontWeight: '400',
   },
   footerLink: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.subhead,
+    fontWeight: '700',
   },
 });
-

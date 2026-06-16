@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../config/theme';
+import { spacing, radius, typography, cardShadow, controlHeight } from '../config/design';
 import { Toast } from '../components/Toast';
 
 interface LoginScreenProps {
@@ -58,7 +59,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setLoading(true);
     try {
       await login({ email: email.trim(), password });
-      // Navigation will be handled by App.tsx based on auth state
     } catch (error: any) {
       showToast(error.message || 'Error al iniciar sesión', 'error');
     } finally {
@@ -82,8 +82,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <View style={[styles.iconContainer, { backgroundColor: theme.button }]}>
-              <Ionicons name="lock-closed" size={32} color="#3b82f6" />
+            <View style={[styles.iconContainer, { backgroundColor: theme.primarySoft }]}>
+              <Ionicons name="lock-closed" size={30} color={theme.primary} />
             </View>
             <Text style={[styles.title, { color: theme.text }]}>Bienvenido</Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
@@ -91,15 +91,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </Text>
           </View>
 
-          <View style={[styles.form, { backgroundColor: theme.card }]}>
+          <View style={[styles.form, { backgroundColor: theme.cardElevated, shadowColor: theme.shadow }]}>
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: theme.text }]}>Email</Text>
-              <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.background }]}>
+              <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+              <View style={[styles.inputWrapper, { backgroundColor: theme.inputBg }]}>
                 <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: theme.text }]}
                   placeholder="usuario@ejemplo.com"
-                  placeholderTextColor={theme.textSecondary}
+                  placeholderTextColor={theme.textTertiary}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -111,13 +111,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: theme.text }]}>Contraseña</Text>
-              <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.background }]}>
+              <Text style={[styles.label, { color: theme.textSecondary }]}>Contraseña</Text>
+              <View style={[styles.inputWrapper, { backgroundColor: theme.inputBg }]}>
                 <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: theme.text }]}
                   placeholder="Contraseña"
-                  placeholderTextColor={theme.textSecondary}
+                  placeholderTextColor={theme.textTertiary}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -129,6 +129,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
                   disabled={loading}
+                  hitSlop={8}
                 >
                   <Ionicons
                     name={showPassword ? 'eye-outline' : 'eye-off-outline'}
@@ -142,17 +143,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             <TouchableOpacity
               style={[
                 styles.primaryButton,
-                { backgroundColor: '#3b82f6' },
-                loading && styles.buttonDisabled
+                { backgroundColor: theme.primary, shadowColor: theme.primary },
+                loading && styles.buttonDisabled,
               ]}
               onPress={handleLogin}
               disabled={loading}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               {loading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={theme.onPrimary} size="small" />
               ) : (
-                <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
+                <Text style={[styles.primaryButtonText, { color: theme.onPrimary }]}>Iniciar Sesión</Text>
               )}
             </TouchableOpacity>
 
@@ -160,11 +161,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               <Text style={[styles.footerText, { color: theme.textSecondary }]}>
                 ¿No tienes una cuenta?{' '}
               </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Register')}
-                disabled={loading}
-              >
-                <Text style={[styles.footerLink, { color: '#3b82f6' }]}>Regístrate</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={loading} hitSlop={8}>
+                <Text style={[styles.footerLink, { color: theme.primary }]}>Regístrate</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -184,57 +182,52 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxxl,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    ...typography.largeTitle,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    fontWeight: '400',
+    ...typography.callout,
   },
   form: {
-    padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: spacing.xxl,
+    borderRadius: radius.xl,
+    ...cardShadow,
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: 14,
+    ...typography.footnote,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 50,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    height: controlHeight,
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   input: {
     flex: 1,
@@ -242,24 +235,21 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   eyeIcon: {
-    padding: 4,
+    padding: spacing.xs,
   },
   primaryButton: {
-    height: 50,
-    borderRadius: 12,
+    height: controlHeight,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    marginTop: spacing.sm,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    ...typography.headline,
     letterSpacing: 0.2,
   },
   buttonDisabled: {
@@ -268,14 +258,14 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: spacing.xxl,
   },
   footerText: {
-    fontSize: 14,
+    ...typography.subhead,
+    fontWeight: '400',
   },
   footerLink: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.subhead,
+    fontWeight: '700',
   },
 });
-

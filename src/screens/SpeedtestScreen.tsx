@@ -138,14 +138,14 @@ export const SpeedtestScreen: React.FC = () => {
 
   const getSpeedColor = (speed: number): string => {
     if (speed >= 100) return theme.success;
-    if (speed >= 50) return '#3b82f6';
+    if (speed >= 50) return '#007AFF';
     if (speed >= 25) return theme.warning;
     return theme.error;
   };
 
   const getPingColor = (ping: number): string => {
     if (ping < 20) return theme.success;
-    if (ping < 50) return '#3b82f6';
+    if (ping < 50) return '#007AFF';
     if (ping < 100) return theme.warning;
     return theme.error;
   };
@@ -306,7 +306,7 @@ export const SpeedtestScreen: React.FC = () => {
           <Ionicons
             name={icon as any}
             size={20}
-            color={disabled ? theme.textSecondary : '#3b82f6'}
+            color={disabled ? theme.textSecondary : '#007AFF'}
           />
         </Animated.View>
       </GestureDetector>
@@ -355,8 +355,8 @@ export const SpeedtestScreen: React.FC = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colorScheme === 'dark' ? '#ffffff' : '#3b82f6'}
-            colors={['#3b82f6']}
+            tintColor={colorScheme === 'dark' ? '#ffffff' : '#007AFF'}
+            colors={['#007AFF']}
           />
         }
       >
@@ -372,7 +372,7 @@ export const SpeedtestScreen: React.FC = () => {
           <>
             <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
               <View style={styles.cardHeader}>
-                <Ionicons name="flash" size={24} color="#3b82f6" />
+                <Ionicons name="flash" size={24} color="#007AFF" />
                 <View style={styles.cardHeaderText}>
                   <Text style={[styles.cardTitle, { color: theme.text }]}>Última Prueba</Text>
                   {summary.latest.timestamp && (
@@ -439,7 +439,7 @@ export const SpeedtestScreen: React.FC = () => {
             {summary?.average && (
               <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="stats-chart" size={24} color="#3b82f6" />
+                  <Ionicons name="stats-chart" size={24} color="#007AFF" />
                   <View style={styles.cardHeaderText}>
                     <Text style={[styles.cardTitle, { color: theme.text }]}>Promedio</Text>
                     {summary.totalTests && (
@@ -487,13 +487,13 @@ export const SpeedtestScreen: React.FC = () => {
         {history && (
           <View style={styles.historySection}>
             <View style={styles.historyHeader}>
-              <Ionicons name="time" size={20} color="#3b82f6" />
+              <Ionicons name="time" size={20} color="#007AFF" />
               <Text style={[styles.historyTitle, { color: theme.text }]}>Historial</Text>
             </View>
 
             {loadingHistory ? (
               <View style={styles.historyLoading}>
-                <ActivityIndicator size="small" color="#3b82f6" />
+                <ActivityIndicator size="small" color="#007AFF" />
               </View>
             ) : history.results.length > 0 ? (
               <>
@@ -579,14 +579,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 20,
     marginHorizontal: 16,
     marginBottom: 16,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',

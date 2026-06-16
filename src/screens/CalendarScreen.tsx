@@ -521,17 +521,17 @@ export const CalendarScreen: React.FC = () => {
                     isToday && !isSelected && { 
                       backgroundColor: 'transparent',
                       borderWidth: 2,
-                      borderColor: '#3b82f6',
+                      borderColor: '#007AFF',
                     },
                     // Día seleccionado cuando NO es hoy: fondo azul sólido, más grande
                     isSelected && !isToday && {
-                      backgroundColor: '#3b82f6',
+                      backgroundColor: '#007AFF',
                       transform: [{ scale: 1.15 }],
                       borderWidth: 0,
                     },
                     // Día seleccionado Y es hoy: fondo azul con borde más grueso y más grande
                     isTodayAndSelected && {
-                      backgroundColor: '#3b82f6',
+                      backgroundColor: '#007AFF',
                       borderWidth: 3,
                       borderColor: '#ffffff',
                       transform: [{ scale: 1.2 }],
@@ -546,7 +546,7 @@ export const CalendarScreen: React.FC = () => {
                         color: isSelected
                           ? '#ffffff'
                           : isToday && !isSelected
-                          ? '#3b82f6'
+                          ? '#007AFF'
                           : isCurrentMonth
                           ? theme.text
                           : theme.textSecondary,
@@ -566,7 +566,7 @@ export const CalendarScreen: React.FC = () => {
                         backgroundColor: isSelected
                           ? '#ffffff'
                           : isToday && !isSelected
-                          ? '#3b82f6'
+                          ? '#007AFF'
                           : '#10b981',
                       },
                     ]}
@@ -704,7 +704,7 @@ export const CalendarScreen: React.FC = () => {
                 </View>
                 <TouchableOpacity
                   onPress={goToToday}
-                  style={[styles.todayButton, { backgroundColor: '#3b82f6' }]}
+                  style={[styles.todayButton, { backgroundColor: '#007AFF' }]}
                 >
                   <Ionicons name="calendar" size={16} color="#ffffff" />
                   <Text style={styles.todayButtonText}>Hoy</Text>

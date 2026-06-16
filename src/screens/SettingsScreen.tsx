@@ -325,8 +325,8 @@ export const SettingsScreen: React.FC = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colorScheme === 'dark' ? '#ffffff' : '#3b82f6'}
-            colors={['#3b82f6']}
+            tintColor={colorScheme === 'dark' ? '#ffffff' : '#007AFF'}
+            colors={['#007AFF']}
           />
         }
       >
@@ -432,7 +432,7 @@ export const SettingsScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
-                  { backgroundColor: '#3b82f6' },
+                  { backgroundColor: '#007AFF' },
                   (savingCardId || !cardId.trim()) && styles.buttonDisabled
                 ]}
                 onPress={handleSaveCardId}
@@ -501,7 +501,7 @@ export const SettingsScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
-                  { backgroundColor: '#3b82f6' },
+                  { backgroundColor: '#007AFF' },
                   (savingCookie || !cookieValue.trim()) && styles.buttonDisabled
                 ]}
                 onPress={handleSaveCookie}
@@ -579,7 +579,7 @@ export const SettingsScreen: React.FC = () => {
                   value={notificationsEnabled}
                   onValueChange={handleToggleNotifications}
                   disabled={togglingNotifications}
-                  trackColor={{ false: theme.border, true: '#3b82f6' }}
+                  trackColor={{ false: theme.border, true: '#007AFF' }}
                   thumbColor={notificationsEnabled ? '#ffffff' : theme.textSecondary}
                   ios_backgroundColor={theme.border}
                 />
@@ -672,15 +672,15 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   section: {
-    marginHorizontal: 20,
-    marginBottom: 24,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 18,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

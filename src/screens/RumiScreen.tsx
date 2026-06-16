@@ -123,7 +123,7 @@ const DraggablePlayerCardComponent: React.FC<DraggablePlayerCardProps> = ({
 
   const borderAnimatedStyle = useAnimatedStyle(() => {
     return {
-      borderColor: isDraggingShared.value === 1 ? '#3b82f6' : (isActive && isRunning ? '#3b82f6' : theme.border),
+      borderColor: isDraggingShared.value === 1 ? '#007AFF' : (isActive && isRunning ? '#007AFF' : theme.border),
       borderWidth: (isDraggingShared.value === 1 || (isActive && isRunning)) ? 2 : 1,
     };
   });
@@ -142,13 +142,13 @@ const DraggablePlayerCardComponent: React.FC<DraggablePlayerCardProps> = ({
       >
         <View style={styles.playerCardContent}>
           {isActive && isRunning && (
-            <View style={[styles.activeIndicator, { backgroundColor: '#3b82f6' }]} />
+            <View style={[styles.activeIndicator, { backgroundColor: '#007AFF' }]} />
           )}
           {!isRunning && (
             <Ionicons 
               name="reorder-three" 
               size={20} 
-              color={isDraggingState ? '#3b82f6' : theme.textSecondary} 
+              color={isDraggingState ? '#007AFF' : theme.textSecondary} 
               style={{ marginRight: 8, opacity: isDraggingState ? 1 : 0.5 }} 
             />
           )}
@@ -157,7 +157,7 @@ const DraggablePlayerCardComponent: React.FC<DraggablePlayerCardProps> = ({
               styles.playerName,
               {
                 color: isActive && isRunning
-                  ? '#3b82f6'
+                  ? '#007AFF'
                   : theme.text,
                 fontWeight: isActive && isRunning ? '600' : '400',
               },
@@ -166,7 +166,7 @@ const DraggablePlayerCardComponent: React.FC<DraggablePlayerCardProps> = ({
             {player}
           </Text>
           {isActive && isRunning && (
-            <Text style={[styles.activeLabel, { color: '#3b82f6' }]}>TURNO</Text>
+            <Text style={[styles.activeLabel, { color: '#007AFF' }]}>TURNO</Text>
           )}
         </View>
         {!isRunning && (
@@ -539,7 +539,7 @@ export const RumiScreen: React.FC = () => {
               editable={!isRunning}
             />
             <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: '#3b82f6' }]}
+              style={[styles.addButton, { backgroundColor: '#007AFF' }]}
               onPress={addPlayer}
               disabled={isRunning}
               activeOpacity={0.7}
@@ -579,7 +579,7 @@ export const RumiScreen: React.FC = () => {
                 <Text style={[styles.currentPlayerLabel, { color: theme.textSecondary }]}>
                   TURNO DE
                 </Text>
-                <Text style={[styles.currentPlayerName, { color: '#3b82f6' }]}>
+                <Text style={[styles.currentPlayerName, { color: '#007AFF' }]}>
                   {currentPlayer}
                 </Text>
               </View>
@@ -605,7 +605,7 @@ export const RumiScreen: React.FC = () => {
           <View style={styles.controlsContainer}>
             {!isRunning ? (
               <TouchableOpacity
-                style={[styles.controlButton, styles.primaryButton, { backgroundColor: '#3b82f6' }]}
+                style={[styles.controlButton, styles.primaryButton, { backgroundColor: '#007AFF' }]}
                 onPress={startGame}
                 disabled={players.length < 2}
                 activeOpacity={0.7}
@@ -700,15 +700,15 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   section: {
-    marginHorizontal: 20,
-    marginBottom: 24,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 18,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButton: {
-    shadowColor: '#3b82f6',
+    shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

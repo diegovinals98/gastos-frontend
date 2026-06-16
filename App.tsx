@@ -77,7 +77,7 @@ function AppContent() {
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Cargando...</Text>
         </View>
       </SafeAreaView>
@@ -95,7 +95,7 @@ function AppContent() {
           <Tab.Navigator
             // Tab bar NATIVA (UITabBarController). En iOS 26 el sistema le
             // aplica Liquid Glass automáticamente, con su cápsula de selección.
-            tabBarActiveTintColor="#3b82f6"
+            tabBarActiveTintColor={theme.primary}
             tabBarInactiveTintColor={theme.textSecondary}
             translucent
             hapticFeedbackEnabled
