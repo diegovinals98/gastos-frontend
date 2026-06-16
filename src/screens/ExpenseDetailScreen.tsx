@@ -170,8 +170,7 @@ export const ExpenseDetailScreen: React.FC = () => {
         <View style={[styles.group, { backgroundColor: theme.cardElevated }]}>
           <Row label="Fecha" value={formattedDate} />
           <Row label="Hora" value={formattedTime} />
-          <Row label="Moneda" value={gasto.currency} />
-          <Row label="ID de transacción" value={String(gasto.id)} last />
+          <Row label="Moneda" value={gasto.currency} last />
         </View>
 
         {/* UBICACIÓN */}
