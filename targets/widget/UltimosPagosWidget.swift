@@ -94,7 +94,8 @@ struct UltimosPagosView: View {
           Spacer()
           Text("Quedan \(euros(summary.companyRemaining))")
             .font(.caption.weight(.semibold))
-            .foregroundStyle(summary.isCompanyMaxed ? .red : .green)
+            .foregroundStyle(stateColor(summary))
+          RefreshButton(updated: horaActualizacion(summary))
         }
 
         let pagos = summary.recentGastos!
@@ -125,7 +126,7 @@ struct UltimosPagosWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: kind, provider: SaldoProvider()) { entry in
       UltimosPagosView(entry: entry)
-        .containerBackground(.background, for: .widget)
+        .containerBackground(for: .widget) { TintedBackground(summary: entry.summary) }
     }
     .configurationDisplayName("Últimos pagos")
     .description("Los últimos pagos con la tarjeta y su estado.")

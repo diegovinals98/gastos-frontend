@@ -19,8 +19,10 @@ struct GastosSummary: Codable {
   let payrollBudget: Double
   let companyRemaining: Double
   let payrollRemaining: Double
-  let workdaysLeft: Int
-  let dailyAllowance: Double
+  // Ya no se usan (el widget calcula los días naturales por su cuenta); opcionales
+  // para que el backend pueda dejar de mandarlos
+  let workdaysLeft: Int?
+  let dailyAllowance: Double?
   let lastGasto: LastGasto?
   // Opcionales para no romper si el backend aún no los devuelve
   let recentGastos: [RecentGasto]?
@@ -54,6 +56,33 @@ struct GastosSummary: Codable {
   }
 
   var isCompanyMaxed: Bool { totalSpent >= companyBudget }
+
+  // Días naturales que quedan en el mes contando hoy (hora de Madrid);
+  // el presupuesto se gasta cualquier día, no solo los laborables
+  var daysLeft: Int {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Madrid")!
+    let now = Date()
+    let parts = calendar.dateComponents([.year, .month, .day], from: now)
+    guard parts.year == year, parts.month == month, let day = parts.day,
+          let range = calendar.range(of: .day, in: .month, for: now) else { return 0 }
+    return range.count - day + 1
+  }
+
+  // Saldo de empresa repartido entre los días que quedan
+  var allowancePerDay: Double {
+    daysLeft > 0 ? companyRemaining / Double(daysLeft) : 0
+  }
+
+  // Lo gastado hoy (hora de Madrid); nil si el backend no manda dailySpent
+  var spentToday: Double? {
+    guard let dailySpent else { return nil }
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Madrid")!
+    let parts = calendar.dateComponents([.year, .month, .day], from: Date())
+    guard parts.year == year, parts.month == month, let day = parts.day, day <= dailySpent.count else { return 0 }
+    return dailySpent[day - 1]
+  }
 }
 
 struct SaldoEntry: TimelineEntry {
@@ -127,12 +156,6 @@ func euros(_ value: Double, decimals: Int = 2) -> String {
   value.formatted(.number.precision(.fractionLength(decimals)).locale(Locale(identifier: "es_ES"))) + " €"
 }
 
-private func barColor(_ summary: GastosSummary) -> Color {
-  if summary.isCompanyMaxed { return .red }
-  if summary.spentRatio > 0.8 { return .orange }
-  return .green
-}
-
 struct SaldoWidgetView: View {
   @Environment(\.widgetFamily) private var family
   let entry: SaldoEntry
@@ -157,9 +180,13 @@ struct SmallView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Label("SALDO", systemImage: "creditcard.fill")
-        .font(.caption2.weight(.semibold))
-        .foregroundStyle(.secondary)
+      HStack {
+        Label("SALDO", systemImage: "creditcard.fill")
+          .font(.caption2.weight(.semibold))
+          .foregroundStyle(.secondary)
+        Spacer(minLength: 0)
+        RefreshButton()
+      }
 
       Spacer(minLength: 0)
 
@@ -172,8 +199,8 @@ struct SmallView: View {
 
       BudgetBar(summary: summary)
 
-      Text(summary.workdaysLeft > 0
-           ? "≈ \(euros(summary.dailyAllowance))/día"
+      Text(summary.daysLeft > 0
+           ? "≈ \(euros(summary.allowancePerDay))/día"
            : "de \(euros(summary.companyBudget, decimals: 0))")
         .font(.caption2)
         .foregroundStyle(.secondary)
@@ -190,12 +217,16 @@ struct MediumView: View {
 
       // Columna secundaria: etiquetas diminutas y valores pequeños para no competir con el saldo
       VStack(alignment: .leading, spacing: 0) {
+        if let today = summary.spentToday {
+          MiniStat(title: "HOY", value: euros(today))
+          Spacer(minLength: 4)
+        }
         MiniStat(title: "GASTADO", value: euros(summary.totalSpent))
         Spacer(minLength: 4)
         if summary.isCompanyMaxed {
           MiniStat(title: "NÓMINA", value: euros(summary.payrollRemaining))
         } else {
-          MiniStat(title: "QUEDAN", value: "\(summary.workdaysLeft) días lab.")
+          MiniStat(title: "QUEDAN", value: summary.daysLeft == 1 ? "1 día" : "\(summary.daysLeft) días")
         }
         Spacer(minLength: 4)
         if let last = summary.lastGasto {
@@ -234,7 +265,7 @@ private struct BudgetBar: View {
       ZStack(alignment: .leading) {
         Capsule().fill(Color.gray.opacity(0.2))
         Capsule()
-          .fill(barColor(summary))
+          .fill(stateColor(summary))
           .frame(width: max(geo.size.width * summary.spentRatio, summary.spentRatio > 0 ? 4 : 0))
       }
     }
@@ -294,7 +325,7 @@ struct SaldoWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: kind, provider: SaldoProvider()) { entry in
       SaldoWidgetView(entry: entry)
-        .containerBackground(.background, for: .widget)
+        .containerBackground(for: .widget) { TintedBackground(summary: entry.summary) }
     }
     .configurationDisplayName("Saldo del mes")
     .description("Lo que te queda del presupuesto de empresa.")

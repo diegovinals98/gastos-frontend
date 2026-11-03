@@ -3,7 +3,7 @@ import SwiftUI
 import WidgetKit
 
 // Datos del gráfico: gasto acumulado hasta hoy y lo que "deberías" llevar si
-// repartieras el presupuesto de empresa por igual entre los días laborables
+// repartieras el presupuesto de empresa por igual entre todos los días del mes
 private struct DatosGrafico {
   struct Punto: Identifiable {
     let day: Int
@@ -28,24 +28,14 @@ private struct DatosGrafico {
     let isCurrentMonth = parts.year == summary.year && parts.month == summary.month
     hoy = isCurrentMonth ? min(parts.day ?? lastDay, lastDay) : lastDay
 
-    // Laborable = lunes a viernes
-    let workdays: [Bool] = (1...lastDay).map { day in
-      let date = calendar.date(from: DateComponents(year: summary.year, month: summary.month, day: day))!
-      let weekday = calendar.component(.weekday, from: date)
-      return weekday != 1 && weekday != 7
-    }
-    let totalWorkdays = max(workdays.filter { $0 }.count, 1)
-
     var running = 0.0
     acumulado = (1...hoy).map { day in
       running += day <= daily.count ? daily[day - 1] : 0
       return Punto(day: day, value: running)
     }
 
-    var elapsed = 0
     ideal = (1...lastDay).map { day in
-      if workdays[day - 1] { elapsed += 1 }
-      return Punto(day: day, value: summary.companyBudget * Double(elapsed) / Double(totalWorkdays))
+      Punto(day: day, value: summary.companyBudget * Double(day) / Double(lastDay))
     }
 
     llevas = running
@@ -96,6 +86,7 @@ struct GraficoMesView: View {
       .font(.caption.weight(.semibold))
       .foregroundStyle(datos.vasBien ? .green : .red)
       .lineLimit(1)
+      RefreshButton()
     }
   }
 
@@ -138,7 +129,10 @@ struct GraficoMesWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: kind, provider: SaldoProvider()) { entry in
       GraficoMesView(entry: entry)
-        .containerBackground(.background, for: .widget)
+        // Aquí el tinte sigue al ritmo (como el texto "por encima/por debajo"), no al saldo
+        .containerBackground(for: .widget) {
+          TintedBackground(tint: entry.summary.map { DatosGrafico(summary: $0).vasBien ? .green : .red })
+        }
     }
     .configurationDisplayName("Gasto del mes")
     .description("Lo que llevas gastado frente al ritmo ideal para llegar a fin de mes.")
