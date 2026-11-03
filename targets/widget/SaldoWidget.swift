@@ -22,12 +22,31 @@ struct GastosSummary: Codable {
   let workdaysLeft: Int
   let dailyAllowance: Double
   let lastGasto: LastGasto?
+  // Opcionales para no romper si el backend aún no los devuelve
+  let recentGastos: [RecentGasto]?
+  let dailySpent: [Double]?
   let updatedAt: String
+
+  struct RecentGasto: Codable, Hashable {
+    let merchant: String
+    let amount: Double
+    let date: String
+    let status: String
+  }
 
   static let placeholder = GastosSummary(
     year: 2026, month: 11, totalSpent: 72.4, companyBudget: 200, payrollBudget: 20,
     companyRemaining: 127.6, payrollRemaining: 20, workdaysLeft: 19, dailyAllowance: 6.72,
-    lastGasto: LastGasto(merchant: "Cafetería", amount: 3.2, date: ""), updatedAt: ""
+    lastGasto: LastGasto(merchant: "Cafetería", amount: 3.2, date: ""),
+    recentGastos: [
+      RecentGasto(merchant: "Cafetería Central", amount: 3.2, date: "2026-11-03T08:41:00.000Z", status: "complete"),
+      RecentGasto(merchant: "Glovo", amount: 14.9, date: "2026-11-02T13:12:00.000Z", status: "complete"),
+      RecentGasto(merchant: "Uber", amount: 9.5, date: "2026-11-02T09:02:00.000Z", status: "decline"),
+      RecentGasto(merchant: "Mercadona", amount: 22.1, date: "2026-11-01T18:30:00.000Z", status: "refund"),
+      RecentGasto(merchant: "Starbucks", amount: 4.6, date: "2026-11-01T08:15:00.000Z", status: "withhold"),
+    ],
+    dailySpent: [8.2, 12.5, 3.2, 0, 0, 14.1, 9.8, 0, 6.4, 18.2] + Array(repeating: 0, count: 20),
+    updatedAt: ""
   )
 
   var spentRatio: Double {
@@ -104,7 +123,7 @@ struct SaldoProvider: TimelineProvider {
 
 // MARK: - Vistas
 
-private func euros(_ value: Double, decimals: Int = 2) -> String {
+func euros(_ value: Double, decimals: Int = 2) -> String {
   value.formatted(.number.precision(.fractionLength(decimals)).locale(Locale(identifier: "es_ES"))) + " €"
 }
 
@@ -133,7 +152,7 @@ struct SaldoWidgetView: View {
   }
 }
 
-private struct SmallView: View {
+struct SmallView: View {
   let summary: GastosSummary
 
   var body: some View {
@@ -151,8 +170,7 @@ private struct SmallView: View {
         .lineLimit(1)
         .contentTransition(.numericText())
 
-      ProgressView(value: summary.spentRatio)
-        .tint(barColor(summary))
+      BudgetBar(summary: summary)
 
       Text(summary.workdaysLeft > 0
            ? "≈ \(euros(summary.dailyAllowance))/día"
@@ -163,47 +181,64 @@ private struct SmallView: View {
   }
 }
 
-private struct MediumView: View {
+struct MediumView: View {
   let summary: GastosSummary
 
   var body: some View {
     HStack(spacing: 16) {
       SmallView(summary: summary)
 
-      VStack(alignment: .leading, spacing: 8) {
-        StatRow(title: "Gastado", value: euros(summary.totalSpent))
-        StatRow(title: "Días laborables", value: "\(summary.workdaysLeft)")
+      // Columna secundaria: etiquetas diminutas y valores pequeños para no competir con el saldo
+      VStack(alignment: .leading, spacing: 0) {
+        MiniStat(title: "GASTADO", value: euros(summary.totalSpent))
+        Spacer(minLength: 4)
         if summary.isCompanyMaxed {
-          StatRow(title: "Nómina", value: euros(summary.payrollRemaining))
+          MiniStat(title: "NÓMINA", value: euros(summary.payrollRemaining))
+        } else {
+          MiniStat(title: "QUEDAN", value: "\(summary.workdaysLeft) días lab.")
         }
+        Spacer(minLength: 4)
         if let last = summary.lastGasto {
-          Divider()
-          VStack(alignment: .leading, spacing: 2) {
-            Text("Último pago")
-              .font(.caption2)
-              .foregroundStyle(.secondary)
-            Text("\(last.merchant) · \(euros(last.amount))")
-              .font(.caption.weight(.medium))
-              .lineLimit(1)
-          }
+          MiniStat(title: "ÚLTIMO PAGO", value: "\(last.merchant) · \(euros(last.amount))")
         }
-        Spacer(minLength: 0)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
   }
 }
 
-private struct StatRow: View {
+private struct MiniStat: View {
   let title: String
   let value: String
 
   var body: some View {
-    HStack {
-      Text(title).font(.caption).foregroundStyle(.secondary)
-      Spacer()
-      Text(value).font(.caption.weight(.semibold)).monospacedDigit()
+    VStack(alignment: .leading, spacing: 1) {
+      Text(title)
+        .font(.system(size: 9, weight: .semibold))
+        .foregroundStyle(.secondary)
+      Text(value)
+        .font(.system(size: 13, weight: .semibold, design: .rounded))
+        .monospacedDigit()
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
     }
+  }
+}
+
+// Barra fina propia en vez de ProgressView, que en widgets queda gruesa y con el tinte del sistema
+private struct BudgetBar: View {
+  let summary: GastosSummary
+
+  var body: some View {
+    GeometryReader { geo in
+      ZStack(alignment: .leading) {
+        Capsule().fill(Color.gray.opacity(0.2))
+        Capsule()
+          .fill(barColor(summary))
+          .frame(width: max(geo.size.width * summary.spentRatio, summary.spentRatio > 0 ? 4 : 0))
+      }
+    }
+    .frame(height: 5)
   }
 }
 
@@ -235,7 +270,7 @@ private struct RectangularView: View {
   }
 }
 
-private struct EmptyStateView: View {
+struct EmptyStateView: View {
   let loggedIn: Bool
 
   var body: some View {

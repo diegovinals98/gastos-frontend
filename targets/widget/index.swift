@@ -5,5 +5,7 @@ import WidgetKit
 struct VicaWidgets: WidgetBundle {
   var body: some Widget {
     SaldoWidget()
+    UltimosPagosWidget()
+    GraficoMesWidget()
   }
 }
