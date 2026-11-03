@@ -1,8 +1,9 @@
 const { withXcodeProject } = require('expo/config-plugins');
 
 // Expo escribe ASSETCATALOG_COMPILER_APPICON_NAME (icono Liquid Glass) en todas las
-// configuraciones, también en las del widget, que falla al compilar porque su catálogo
-// no tiene ese icono. Lo dejamos solo en las del target de la app.
+// configuraciones, también en las del widget y el reloj, que fallan al compilar porque
+// su catálogo no tiene ese icono. Lo dejamos solo en las del target de la app; la app
+// del reloj vuelve a su "AppIcon", que genera apple-targets desde `icon`.
 module.exports = function withWidgetIconFix(config) {
   return withXcodeProject(config, (cfg) => {
     const appBundleId = cfg.ios?.bundleIdentifier;
@@ -10,7 +11,10 @@ module.exports = function withWidgetIconFix(config) {
     for (const buildConfig of Object.values(configurations)) {
       const settings = buildConfig?.buildSettings;
       const bundleId = String(settings?.PRODUCT_BUNDLE_IDENTIFIER ?? '').replace(/"/g, '');
-      if (settings && bundleId !== appBundleId) {
+      if (!settings || bundleId === appBundleId) continue;
+      if (bundleId === `${appBundleId}.watchkitapp`) {
+        settings.ASSETCATALOG_COMPILER_APPICON_NAME = 'AppIcon';
+      } else {
         delete settings.ASSETCATALOG_COMPILER_APPICON_NAME;
       }
     }
