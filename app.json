@@ -17,7 +17,7 @@
       "icon": "./assets/icon_liquid.icon",
       "supportsTablet": true,
       "bundleIdentifier": "com.factorial.gastos",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Esta app necesita acceso a las notificaciones para recordarte sobre tus gastos.",
         "ITSAppUsesNonExemptEncryption": false
@@ -88,7 +88,15 @@
       "react-native-bottom-tabs",
       "@bacons/apple-targets",
       "./plugins/withWidgetIconFix",
-      "./plugins/withPodsMinDeploymentTarget"
+      "./plugins/withPodsMinDeploymentTarget",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

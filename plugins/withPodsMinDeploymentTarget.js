@@ -4,8 +4,8 @@ const { withDangerousMod } = require('expo/config-plugins');
 
 // Xcode 27 solo acepta deployment targets >= 15.0. Algunos pods (react-native-maps,
 // AsyncStorage) declaran 11.0 / 13.4 en sus bundles de recursos y rompen la build.
-// Subimos a 15.1 (el mínimo de la app) los que estén por debajo.
-const MIN_TARGET = '15.1';
+// Subimos a 16.4 (el mínimo de la app, ver expo-build-properties en app.json) los que estén por debajo.
+const MIN_TARGET = '16.4';
 const MARKER = '# withPodsMinDeploymentTarget';
 
 const SNIPPET = `
