@@ -12,6 +12,7 @@
     "clean": "rm -rf .expo node_modules/.cache .expo-shared"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "@bottom-tabs/react-navigation": "^1.3.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.4.0",

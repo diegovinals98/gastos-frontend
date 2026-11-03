@@ -2,7 +2,7 @@
   "expo": {
     "name": "VICA",
     "slug": "gastos",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "splash": {
@@ -17,10 +17,49 @@
       "icon": "./assets/icon_liquid.icon",
       "supportsTablet": true,
       "bundleIdentifier": "com.factorial.gastos",
-      "buildNumber": "2",
+      "buildNumber": "1",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Esta app necesita acceso a las notificaciones para recordarte sobre tus gastos.",
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.factorial.gastos"
+        ]
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1",
+              "0A2A.1",
+              "3B52.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1",
+              "1C8F.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1",
+              "85F4.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
+          }
+        ],
+        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyTracking": false
       }
     },
     "android": {
@@ -46,7 +85,10 @@
         }
       ],
       "expo-router",
-      "react-native-bottom-tabs"
+      "react-native-bottom-tabs",
+      "@bacons/apple-targets",
+      "./plugins/withWidgetIconFix",
+      "./plugins/withPodsMinDeploymentTarget"
     ],
     "extra": {
       "eas": {

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/env';
 import { LoginCredentials, RegisterCredentials, AuthResponse, User } from '../types';
 import { logout as logoutAPI } from './api';
+import { setWidgetToken } from './widget';
 
 const TOKEN_KEY = '@auth_token';
 const USER_KEY = '@user_data';
@@ -10,6 +11,7 @@ const USER_KEY = '@user_data';
 export async function saveToken(token: string): Promise<void> {
   try {
     await AsyncStorage.setItem(TOKEN_KEY, token);
+    setWidgetToken(token);
   } catch (error) {
     console.error('Error saving token:', error);
     throw error;
@@ -28,6 +30,7 @@ export async function getToken(): Promise<string | null> {
 export async function removeToken(): Promise<void> {
   try {
     await AsyncStorage.removeItem(TOKEN_KEY);
+    setWidgetToken(null);
   } catch (error) {
     console.error('Error removing token:', error);
   }

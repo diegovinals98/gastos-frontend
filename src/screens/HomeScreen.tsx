@@ -25,6 +25,7 @@ import { ExpensesList } from '../components/ExpensesList';
 import { MonthSelector } from '../components/MonthSelector';
 import { Toast } from '../components/Toast';
 import { fetchGastos } from '../services/api';
+import { reloadWidget } from '../services/widget';
 import { GastosResponse, Gasto } from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -275,6 +276,7 @@ export const HomeScreen: React.FC = () => {
       
       // Actualizar con datos frescos
       setGastosData(data);
+      reloadWidget();
       
       // Si hay un gasto para resaltar, hacer scroll a él después de un breve delay
       if (highlightedExpenseId && data?.gastos) {

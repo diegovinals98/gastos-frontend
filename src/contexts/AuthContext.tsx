@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext, ReactNode } from
 import { getToken, getUser, isTokenExpired, removeToken, removeUser } from '../services/auth';
 import { login as loginService, register as registerService, logout as logoutService } from '../services/auth';
 import { User, LoginCredentials, RegisterCredentials } from '../types';
+import { setWidgetToken } from '../services/widget';
 
 interface AuthContextType {
   user: User | null;
@@ -42,7 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Token válido, usuario autenticado
+      // Token válido, usuario autenticado (se comparte con el widget por si se guardó antes de existir)
+      setWidgetToken(token);
       setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {
